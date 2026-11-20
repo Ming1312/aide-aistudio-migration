@@ -5,6 +5,7 @@
 | **M0** 遷移包 | 功能清單、資料結構、模型依賴、API 契約、Build Prompt、合成展示資料、引擎 API（唯讀）、新舊比對與驗收標準 | 本資料夾 | `tools/p63_verify_package.py` 全過；引擎 `p63_api_check.py` 全過；Gemini 單元測試全過 | ✅ 本次完成 |
 | **M1** 前端＋真實資料探索＋合成展示（無引擎） | 在 AI Studio Build Mode 用 `BUILD_MODE_PROMPT.md` 建立前端：七場域**完整真實資料**探索（圖表、篩選、欄位說明、時間資訊、下載）、來源與使用聲明頁、引擎**預計算（離線）**的真實預測與多模型比較、合成資料的 D1–D5 資料更新展示、真實／合成分離、Gemini 解釋 | `app_repo/`（匯入 GitHub → Build Mode） | F-01、F-02、F-05、F-09、F-11、F-12、F-15、F-16、F-17、F-18…F-22、G-01…G-06、S-01…S-04、R-01…R-04 | 🔵 待你在 AI Studio 建立 |
 | **M2** 接上唯讀引擎 | 私有部署 `python_engine_private/`；Node 代理 `/api/forecast`、`/api/formal/sheep-thi`、`/api/anomalies`；引擎離線降級 | 引擎容器；Secrets | E-01…E-07、F-03、F-04、F-10(部分)；**API 與舊引擎逐位元一致** | 🟡 引擎已完成，部署待你決定 |
+| **M2.5** 七場域決策輔助 | Node 代理 `/api/decision/:id`、`/api/decision/explain`；前端三層呈現（`BUILD_MODE_PROMPT_M2_DECISION.md`） | 同 M2；Gemini 金鑰 | DS-U-01…DS-U-08（`docs/10`） | 🟡 規則層與核對已完成；前端待 Build Mode |
 | **M3** 資料更新與版本 | 實作 workspace、stage／commit／回復／稽核／verify | 引擎擴充（契約 `docs/04` §2.1–2.2） | E-09、V-01…V-08、F-06、F-07、F-14 | 🟡 |
 | **M4** 預測紀錄與模型維護 | ledger、監測、守門、人工重訓、新舊比較、啟用／回復 | 引擎擴充（§2.3–2.4） | E-10…E-12、F-08 | 🟡 |
 | **M5** 羊舍決策與審查 | 決策引擎、人工決策、歷史回放、審查 | 引擎擴充（§2.5） | E-13、E-14、F-10、F-13；`real_decision_diff: 0` | 🟡 |

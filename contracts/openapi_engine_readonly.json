@@ -471,6 +471,60 @@
      }
     }
    }
+  },
+  "/v1/decision-support/{dataset_id}": {
+   "get": {
+    "summary": "Decision Support",
+    "description": "七場域通用的決策輔助：證據（可追溯）→ 分層建議（一般／需人工確認／正式風險）→ 可信程度與限制。\n不產生任何新的預測、門檻或控制指令；Gemini 的白話改寫在 Node 端，且不得更動這裡的層級、可信程度與限制。",
+    "operationId": "decision_support_v1_decision_support__dataset_id__get",
+    "parameters": [
+     {
+      "name": "dataset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Dataset Id"
+      }
+     },
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {

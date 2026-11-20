@@ -20,9 +20,10 @@
 ```
 BUILD_MODE_PROMPT.md           貼給 Build Mode 的建站 Prompt（M1）
 AI_STUDIO_PROJECT_BRIEF.md     本檔
-docs/01…09                     功能清單、資料結構、模型依賴、API 契約、引擎 API 化方案、新舊比對與驗收、合成資料、安全政策、搬遷階段
+docs/01…10                     功能清單、資料結構、模型依賴、API 契約、引擎 API 化方案、新舊比對與驗收、合成資料、安全政策、搬遷階段、七場域決策輔助
 contracts/                     openapi_engine_readonly.json（引擎唯讀 API 規格）、types.ts（全站型別）
-reference/                     geminiExplain.ts（有根據的 Gemini 解釋＋核對）、adminAuth.ts（管理者解鎖）＋單元測試
+reference/                     geminiExplain.ts（有根據的 Gemini 解釋＋核對）、decisionExplain.ts（決策輔助白話改寫＋逐項核對）、adminAuth.ts（管理者解鎖）＋單元測試
+BUILD_MODE_PROMPT_M2_DECISION.md  M2：七場域決策輔助的追加 Prompt
 public/data/real_public/       七場域完整真實資料（乾淨 CSV、欄位說明、來源與使用聲明、時間資訊）＋引擎預計算（離線）輸出
 public/data/demo_synthetic/    七場域 × D1–D5 合成資料、manifest、欄位意義、注入真值（獨立檔案）
 public/data/demo_precomputed/  引擎在合成資料上逐步（D1→D5）的真實輸出
@@ -36,6 +37,7 @@ public/data/demo_precomputed/  引擎在合成資料上逐步（D1→D5）的真
 | 真實資料（使用者聲明可公開展示）、來源與使用聲明、預計算（離線）預測與異常 | ✅ |
 | 合成展示資料與預計算輸出 | ✅ |
 | Gemini 解釋的核對邏輯、管理者解鎖（含與 Python 雜湊相容測試） | ✅ 單元測試通過（12/12） |
+| 七場域決策輔助（規則層＋證據＋Gemini 改寫核對；羊舍正式引擎原樣保留） | ✅ 規則層與核對完成並驗收；一個非羊舍端到端案例（三爺宮溪）逐項檢視；其餘五場域管線已跑通、待逐場域檢視；Gemini 未真實呼叫 |
 | 前端與 Node 伺服器 | 🔵 待 Build Mode 依 `BUILD_MODE_PROMPT.md` 建立 |
 | 版本庫／模型維護／羊舍決策等寫入類 API | 🟡 契約已定，待實作（M3–M5） |
 

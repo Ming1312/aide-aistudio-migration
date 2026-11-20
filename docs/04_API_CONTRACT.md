@@ -21,6 +21,7 @@
 | `GET /v1/datasets/{id}/series?columns=a,b&start&end&resample=none\|1D&max_points` | 時間序列（欄位白名單、最多 12 欄、最多 5000 點） | Sensor Analytics 圖表 |
 | `GET /v1/datasets/{id}/quality` | 缺值／卡值／零值／離群候選 | 資料品質 |
 | `GET /v1/datasets/{id}/anomalies?limit` | 候選異常事件（`AnomalyEvent[]`）＋免責聲明 | Anomaly Diagnosis（統計偵測） |
+| `GET /v1/decision-support/{id}` | 通用決策輔助（`DecisionSupportResponse`）：證據（可追溯）→ 分層建議（一般／需人工確認／正式風險）→ 可信程度與限制；唯讀、不產生新預測或門檻 | 七場域決策輔助（見 `docs/10_DECISION_SUPPORT.md`）；羊舍的正式決策引擎保持原樣 |
 | `GET /v1/forecast/tasks?dataset_id` | 預測任務清單與是否開放（含不開放原因） | AI 預測任務選單 |
 | `POST /v1/forecast` `{dataset_id, sensor, horizon_h(1–6), origin?, history_hours?}` | **六種方法並排預測**（既有 HGB／XGBoost／Linear AR＋三個基準）＋各模型驗證／留存誤差＋探索性證據文字＋探索性區間＋歷史曲線＋事後實際值 | Domain Home 多模型比較、AI 預測 |
 | `POST /v1/formal/sheep-thi` `{as_of?, mode: strict\|full}` | 羊舍 THI 正式 HGB：`strict` 只用『當時已存在』的凍結模型（最早凍結點之前拒絕，**不改用全資料模型**）；`full` 只供示範並警示樣本內 | AI Prediction／Risk／Historical Replay |
@@ -73,4 +74,4 @@
 5. 契約變更要 bump `API_VERSION`，Node 伺服器啟動時比對 `/health` 的版本與資料雜湊，不符就降級並告警。
 
 ## 4. Node 伺服器（AI Studio 內）對前端的端點（建議）
-`GET /api/datasets`、`GET /api/series`、`POST /api/forecast`、`POST /api/formal/sheep-thi`、`GET /api/anomalies`（以上＝代理引擎；引擎離線時回『預計算（離線）』並標示）、`POST /api/ai/explain`（Gemini；見 `docs/08` 與 `reference/geminiExplain.ts`）、`POST /api/admin/login`（管理者解鎖）。
+`GET /api/datasets`、`GET /api/series`、`POST /api/forecast`、`POST /api/formal/sheep-thi`、`GET /api/anomalies`（以上＝代理引擎；引擎離線時回『預計算（離線）』並標示）、`POST /api/ai/explain`（Gemini；見 `docs/08` 與 `reference/geminiExplain.ts`）、`GET /api/decision/:datasetId`（代理 `GET /v1/decision-support/{id}`；引擎離線時回 `precomputed/decision_support.json` 並標示『預計算（離線）』）、`POST /api/decision/explain`（Gemini 白話改寫；見 `docs/10` 與 `reference/decisionExplain.ts`）、`POST /api/admin/login`（管理者解鎖）。

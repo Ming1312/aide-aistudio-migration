@@ -129,3 +129,45 @@ export interface PrecomputedForecastTask {
 export interface PrecomputedForecasts { meta: PrecomputedMeta; tasks: Record<string, PrecomputedForecastTask> }
 export interface PrecomputedAnomalies { meta: PrecomputedMeta; datasets: Record<string, AnomaliesResponse> }
 export interface PrecomputedFormalSheep { meta: PrecomputedMeta; formal: { mode: "strict_replay"; n: number; rows: Array<{ as_of: string; model_version: string; in_sample: boolean; result: Record<string, unknown> }> } }
+
+// ---- 通用多場域決策輔助（引擎 GET /v1/decision-support/{dataset_id}；離線版 precomputed/decision_support.json）
+export type DecisionTier = "general" | "needs_human_review" | "formal_risk";
+export type ConfidenceLevel = "high" | "medium" | "low" | "not_assessable";
+export interface DecisionEvidence {
+  id: string;                                   // 例如 E-AN-03；建議靠它回溯到數據
+  kind: "coverage" | "data_quality" | "quality_run" | "anomaly_overview" | "anomaly_candidate" | "forecast_task" | "availability" | "formal_decision";
+  dataset_id: string; data_kind: "real";
+  source: { artifact: string; pointer: string; engine_version: string };   // 數字從哪個引擎輸出來
+  summary: string;                              // 含數字的一句話；Gemini 只能引用這裡的數字
+  data: Record<string, unknown>;
+  window?: { start: string; end: string };
+}
+export interface DecisionRecommendation {
+  id: string; tier: DecisionTier; category: "data_check" | "anomaly_review" | "monitoring" | "model_applicability" | "formal_risk";
+  title: string; action_codes: string[];        // 只能是 policy_registry 的 allowed_actions（沒有任何設備控制）
+  statement: string;                            // 規則層寫的確定性文字（Gemini 失敗或被核對擋下時的備援）
+  evidence_ids: string[];
+  confidence: { level: ConfidenceLevel; basis: Array<{ code: string; text: string }>; cap_reason: string | null };
+  limitations: string[];
+  applicability: { applies_to: string; not_applicable_when: string[] };
+  status: "active" | "suppressed";
+  guard: { thresholds_invented: false; fault_verdict: false; actuation: false };
+}
+export interface DecisionSupportResponse {
+  schema: "aide-decision-support-v1"; dataset_id: string; display_name: string; data_kind: "real"; engine_version: string; generated_at: string | null;
+  capability: { data_checks: boolean; anomaly_review: boolean;
+    forecast: { status: "available" | "not_available"; reason: string | null };
+    formal_risk: { status: "available" | "not_available"; reason: string | null; policy_status: string; validated_policy: boolean } };
+  policy: { confidence_meaning: string; registry_entry: Record<string, unknown>; tiers: Record<string, string>; confidence_ladder: Record<string, string>; forbidden: Record<string, string> };
+  tier_summary: Record<DecisionTier, number>;
+  evidence: DecisionEvidence[]; recommendations: DecisionRecommendation[]; generic_limitations: string[]; notes: string;
+}
+export interface DecisionExplainItem {
+  rec_id: string; tier: DecisionTier; title: string; action_codes: string[]; evidence_ids: string[];
+  confidence: DecisionRecommendation["confidence"]; limitations: string[]; applicability: DecisionRecommendation["applicability"];   // 以上全部由規則層原樣帶出，Gemini 不能更動
+  plain_text: string; plain_text_source: "gemini" | "rule_based"; cites: string[]; fallback_reasons: string[];
+}
+export interface DecisionExplainResponse {
+  dataset_id: string; overview: string; overview_source: "gemini" | "rule_based"; items: DecisionExplainItem[]; cannot_conclude: string[]; disclaimers: string[];
+  guard: { ok: boolean; fallback_items: string[]; dropped_unknown_items: string[]; issues: string[] };
+}
