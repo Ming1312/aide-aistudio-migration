@@ -1,0 +1,223 @@
+{
+ "schema": "aide-provenance-v2",
+ "data_kind": "real",
+ "attestation": {
+  "kind": "user_attestation",
+  "attested_by": "專案使用者（於對話中明確確認）",
+  "attested_on": "2026-11-20",
+  "public_display_confirmed": true,
+  "datasets_covered": [
+   "羊舍",
+   "專家系統",
+   "三爺宮溪",
+   "工地微氣候",
+   "東北角",
+   "育成一廠",
+   "育成北側"
+  ],
+  "scope_uses": [
+   "完整資料展示",
+   "雲端網站呈現",
+   "資料分析",
+   "機器學習預測",
+   "Google AI Studio App 開發"
+  ],
+  "scope_basis": "本競賽專題",
+  "statement": "七個場域的感測資料可以公開使用與展示；已確認這批資料可用於本競賽專題，包括完整資料展示、雲端網站呈現、資料分析、機器學習預測，以及 Google AI Studio App 開發。"
+ },
+ "source": {
+  "provider": "銘祥科技",
+  "programme": "2026 全國 AI 專題創意競賽 AIoT 感測資料",
+  "delivered_by": "競賽方提供",
+  "url": null,
+  "url_status": "競賽方提供／無公開下載網址",
+  "note": "資料由競賽方提供，並非全部透過公開下載網址取得；沒有對應網址，因此不填任何網址。"
+ },
+ "license": {
+  "standard_license_claimed": false,
+  "standard_license": null,
+  "terms_document": null,
+  "summary": "使用者確認上述專題用途可以使用；沒有提供正式的 CC BY、CC0 或其他標準開放授權條款，因此不得宣稱具有這些授權。",
+  "evidence_status": "user_attestation_only",
+  "external_evidence": null
+ },
+ "timezone": {
+  "status": "unconfirmed",
+  "display": "未標示時區（本地時間；尚未向資料提供者確認）"
+ },
+ "confirmed_by_user": [
+  "七個場域的感測資料可以公開使用與展示",
+  "可用於本競賽專題：完整資料展示、雲端網站呈現、資料分析、機器學習預測、Google AI Studio App 開發",
+  "資料提供者與來源說明：銘祥科技提供的 2026 全國 AI 專題創意競賽 AIoT 感測資料（由競賽方提供）"
+ ],
+ "not_provided": [
+  "競賽方或銘祥科技的書面授權／同意文件",
+  "競賽規則中關於資料使用的條文",
+  "標準開放授權條款（CC BY、CC0 等）",
+  "公開下載網址"
+ ],
+ "remaining_items": [
+  {
+   "item": "外部證明文件（競賽方或銘祥科技的書面同意，或競賽規則中關於資料使用的條文）",
+   "blocking": false,
+   "effect": "沒有它，網站與文件只能寫『使用者聲明』；不得寫成『已取得授權證明』"
+  },
+  {
+   "item": "授權範圍邊界：聲明的依據是『本競賽專題』；若網站要在競賽之外長期公開、散布給第三方或商業使用，聲明是否涵蓋並不明確",
+   "blocking": false,
+   "effect": "競賽專題範圍內可用；超出範圍前需另行確認"
+  },
+  {
+   "item": "時間戳記時區未確認",
+   "blocking": false,
+   "effect": "網站標示『未標示時區（本地時間）』"
+  },
+  {
+   "item": "個資人工確認（目前只有自動掃描：0 項）",
+   "blocking": false,
+   "effect": "資料是設備感測值、沒有人名欄位；仍建議資料提供者確認"
+  }
+ ],
+ "datasets": {
+  "sheep_barn": {
+   "display_name": "羊舍（成羊區／仔羊區）",
+   "original_file_name": "羊舍.csv",
+   "original_sha256": "cf66af8897eb5a711bf6943baa7a149fa88915c329ef03f2dc92aff37a9c8961",
+   "original_encoding": "utf-16",
+   "rows": 871,
+   "start": "2026-07-08 08:00:00",
+   "end": "2026-08-13 14:00:00",
+   "sampling": "1 h（100.0% 的間隔相同）",
+   "n_gaps": 0,
+   "longest_gap_hours": 0,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "DO22340",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  },
+  "expert_system_c22": {
+   "display_name": "專家系統 C22（魚塭）",
+   "original_file_name": "專家系統.csv",
+   "original_sha256": "41613bb84dcdb060f62302667a3b1b904d9bb7b6c962e01f957f1c1e8238e258",
+   "original_encoding": "utf-16",
+   "rows": 2698,
+   "start": "2026-06-01 00:00:00",
+   "end": "2026-09-28 21:00:00",
+   "sampling": "1 h（99.9% 的間隔相同）",
+   "n_gaps": 4,
+   "longest_gap_hours": 64,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "專家系統【C22】微氣候 / 專家系統【C22】感測器主機 / 專家系統【C22】設備用電 / 專家系統【C22】魚塭",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  },
+  "sanyegong_creek": {
+   "display_name": "仁德三爺宮溪（河川水質站）",
+   "original_file_name": "三爺宮溪.csv",
+   "original_sha256": "a8c3ca443df5b4d7e796e6802aa25979053bcc60bf05ed27f296804325944822",
+   "original_encoding": "utf-16",
+   "rows": 2881,
+   "start": "2026-01-01 00:00:00",
+   "end": "2026-05-01 00:00:00",
+   "sampling": "1 h（100.0% 的間隔相同）",
+   "n_gaps": 0,
+   "longest_gap_hours": 0,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "仁德三爺宮溪",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  },
+  "construction_site_cb13505": {
+   "display_name": "工地微氣候 CB13505",
+   "original_file_name": "工地微氣候.csv",
+   "original_sha256": "365e2a1398b0f4a3f61fc9267aaf5e746c6929610645adb3b1c74547ce9146e4",
+   "original_encoding": "utf-16",
+   "rows": 2219,
+   "start": "2026-01-01 00:00:00",
+   "end": "2026-04-04 16:00:00",
+   "sampling": "1 h（100.0% 的間隔相同）",
+   "n_gaps": 1,
+   "longest_gap_hours": 30,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "CB13505",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  },
+  "northeast_corner": {
+   "display_name": "東北角",
+   "original_file_name": "東北角.csv",
+   "original_sha256": "6c9724e11fcdc917cbbf2ec8b334b4bd0b26cf8edb56160d4967358ad520bf2d",
+   "original_encoding": "utf-16",
+   "rows": 2026,
+   "start": "2026-06-01 00:00:00",
+   "end": "2026-08-24 09:00:00",
+   "sampling": "1 h（100.0% 的間隔相同）",
+   "n_gaps": 0,
+   "longest_gap_hours": 0,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "東北角",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  },
+  "rearing_plant_1": {
+   "display_name": "育成一廠（檔名為「厰」、欄位前綴為「廠」）",
+   "original_file_name": "育成一厰.csv",
+   "original_sha256": "70070fad19dd1fd4b838ba35cec5d0949e2bb72de77107ab87795330a056f94f",
+   "original_encoding": "utf-16",
+   "rows": 2204,
+   "start": "2026-06-01 00:00:00",
+   "end": "2026-08-31 23:00:00",
+   "sampling": "1 h（100.0% 的間隔相同）",
+   "n_gaps": 1,
+   "longest_gap_hours": 4,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "育成一廠",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  },
+  "rearing_plant_1_north": {
+   "display_name": "育成一廠北側",
+   "original_file_name": "育成北側.csv",
+   "original_sha256": "27f7ee6b2e61767e5344fbf8f2256fafe42e6f03ed7448600eb0f6b7d43a0155",
+   "original_encoding": "utf-16",
+   "rows": 387,
+   "start": "2026-06-01 08:00:00",
+   "end": "2026-08-31 23:00:00",
+   "sampling": "1 h（99.2% 的間隔相同）",
+   "n_gaps": 3,
+   "longest_gap_hours": 1597,
+   "timezone": "未標示時區（本地時間；尚未向資料提供者確認）",
+   "column_prefixes_in_original": "育成一廠北側",
+   "personal_data_check": {
+    "method": "automated_scan（p586_store.scan_pii）",
+    "findings": 0,
+    "checked_by_human": false,
+    "note": "自動掃描只能抓 email／電話等明顯格式；不是法律或隱私審查。感測資料本身沒有人名欄位。"
+   }
+  }
+ }
+}

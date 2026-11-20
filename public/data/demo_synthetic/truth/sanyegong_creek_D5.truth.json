@@ -1,0 +1,86 @@
+{
+ "batch_id": "SYNTH-三爺宮溪-D5-讀值卡住與斷線-2026052901-168h",
+ "domain": "三爺宮溪",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 1,
+  "scenarios": [
+   "stuck_sensor",
+   "outage"
+  ],
+  "stem": "三爺宮溪",
+  "start": "2026-05-29 01:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "a8c3ca443df5b4d7",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-三爺宮溪-D5-讀值卡住與斷線-2026052901-168h",
+  "demo_step": 5,
+  "demo_label": "讀值卡住與斷線"
+ },
+ "events": [
+  {
+   "event_id": "三爺宮溪#slow_drift#2026051601#pH",
+   "domain": "三爺宮溪",
+   "scenario": "slow_drift",
+   "type": "slow_drift",
+   "category": "anomaly",
+   "columns": [
+    "pH"
+   ],
+   "start": "2026-05-16 01:00:00",
+   "end": "2026-06-05 00:00:00",
+   "total_shift_sigma": 3.0,
+   "should_alert": true,
+   "step": 3,
+   "description": "緩慢漂移：10 天累積約 3 個標準差，每天只偏一點點"
+  },
+  {
+   "event_id": "三爺宮溪#stuck_sensor#2026052921#水溫",
+   "domain": "三爺宮溪",
+   "scenario": "stuck_sensor",
+   "type": "stuck_sensor",
+   "category": "anomaly",
+   "columns": [
+    "水溫"
+   ],
+   "start": "2026-05-29 21:00:00",
+   "end": "2026-05-31 02:00:00",
+   "should_alert": true,
+   "step": 5,
+   "description": "讀值卡住 30 小時"
+  },
+  {
+   "event_id": "三爺宮溪#stuck_sensor#2026060205#水溫",
+   "domain": "三爺宮溪",
+   "scenario": "stuck_sensor",
+   "type": "stuck_sensor",
+   "category": "anomaly",
+   "columns": [
+    "水溫"
+   ],
+   "start": "2026-06-02 05:00:00",
+   "end": "2026-06-03 10:00:00",
+   "should_alert": true,
+   "step": 5,
+   "description": "讀值卡住 30 小時"
+  },
+  {
+   "event_id": "三爺宮溪#outage#2026053113",
+   "domain": "三爺宮溪",
+   "scenario": "outage",
+   "type": "outage_missing_rows",
+   "category": "data_quality",
+   "columns": [
+    "*"
+   ],
+   "start": "2026-05-31 13:00:00",
+   "end": "2026-05-31 20:00:00",
+   "should_alert": true,
+   "step": 5,
+   "description": "整列缺失 8 小時（斷線）"
+  }
+ ]
+}

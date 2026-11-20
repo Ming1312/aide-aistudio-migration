@@ -1,0 +1,23 @@
+{
+ "batch_id": "SYNTH-羊舍-D2-環境改變-2026082015-168h",
+ "domain": "羊舍",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 10,
+  "scenarios": [
+   "unusual_benign"
+  ],
+  "stem": "羊舍",
+  "start": "2026-08-20 15:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "cf66af8897eb5a71",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-羊舍-D2-環境改變-2026082015-168h",
+  "demo_step": 2,
+  "demo_label": "環境改變"
+ },
+ "events": []
+}

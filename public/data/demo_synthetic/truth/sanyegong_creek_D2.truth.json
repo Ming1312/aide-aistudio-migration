@@ -1,0 +1,23 @@
+{
+ "batch_id": "SYNTH-三爺宮溪-D2-環境改變-2026050801-168h",
+ "domain": "三爺宮溪",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 1,
+  "scenarios": [
+   "unusual_benign"
+  ],
+  "stem": "三爺宮溪",
+  "start": "2026-05-08 01:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "a8c3ca443df5b4d7",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-三爺宮溪-D2-環境改變-2026050801-168h",
+  "demo_step": 2,
+  "demo_label": "環境改變"
+ },
+ "events": []
+}

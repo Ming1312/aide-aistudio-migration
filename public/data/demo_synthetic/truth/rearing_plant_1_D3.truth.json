@@ -1,0 +1,57 @@
+{
+ "batch_id": "SYNTH-育成一厰-D3-感測器開始漂移-2026091500-168h",
+ "domain": "育成一厰",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 11,
+  "scenarios": [
+   "slow_drift"
+  ],
+  "stem": "育成一厰",
+  "start": "2026-09-15 00:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "70070fad19dd1fd4",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-育成一厰-D3-感測器開始漂移-2026091500-168h",
+  "demo_step": 3,
+  "demo_label": "感測器開始漂移"
+ },
+ "events": [
+  {
+   "event_id": "SYNTH-育成一厰-unusual_benign-s11-2026090100-840h-story#heatwave#2026091804#TEMP",
+   "batch_id": "SYNTH-育成一厰-unusual_benign-s11-2026090100-840h-story",
+   "domain": "育成一厰",
+   "scenario": "unusual_benign",
+   "type": "heatwave",
+   "category": "benign_unusual",
+   "columns": [
+    "TEMP"
+   ],
+   "start": "2026-09-18 04:00:00",
+   "end": "2026-09-20 07:00:00",
+   "description": "正常但不尋常的環境／負載變化",
+   "should_alert": false,
+   "generator_seed": 11,
+   "step": 2
+  },
+  {
+   "event_id": "育成一厰#slow_drift#2026091600#TEMP",
+   "domain": "育成一厰",
+   "scenario": "slow_drift",
+   "type": "slow_drift",
+   "category": "anomaly",
+   "columns": [
+    "TEMP"
+   ],
+   "start": "2026-09-16 00:00:00",
+   "end": "2026-10-05 23:00:00",
+   "total_shift_sigma": -3.0,
+   "should_alert": true,
+   "step": 3,
+   "description": "緩慢漂移：10 天累積約 3 個標準差，每天只偏一點點"
+  }
+ ]
+}

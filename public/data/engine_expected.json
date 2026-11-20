@@ -1,0 +1,4 @@
+{
+ "api_version_prefix": "aistudio-1.",
+ "note": "引擎 /health 回傳的 version 必須以此開頭；契約改版時一併更新"
+}

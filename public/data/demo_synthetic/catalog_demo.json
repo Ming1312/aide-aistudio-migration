@@ -1,0 +1,1178 @@
+{
+ "schema": "aide-catalog-demo-v1",
+ "data_kind": "synthetic",
+ "domains": [
+  {
+   "id": "sheep_barn",
+   "display_name": "羊舍（成羊區／仔羊區）",
+   "domain_id": "livestock_barn",
+   "domain_type": "Livestock Environment",
+   "columns": [
+    {
+     "key": "南右帆布張 23/24",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "南右帆布收 23/24",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "南左帆布張 21/22",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "南左帆布收 21/22",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "北右帆布張 29/30",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "北右帆布收 29/30",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "北左帆布張 27/28",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "北左帆布收 27/28",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "西帆布張 31/32",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "西帆布收 31/32",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "南遮陽張 25/26",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "南遮陽收 25/26",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風扇-07",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風扇-08",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風扇-04",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風扇-03",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ID4-溫度",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ID4-濕度",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ID4-CO2",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Carbon Dioxide (CO2)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ID4-NH3",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Ammonia (NH3)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ID4-CH4",
+     "unit": "ppm 或 %LEL",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Methane (CH4)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "瞬間雨量",
+     "unit": "mm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Rainfall",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "10分鐘雨量",
+     "unit": "mm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Rainfall",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "1小時雨量",
+     "unit": "mm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Rainfall",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區平均溫度",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區平均濕度",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區平均CO2",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Carbon Dioxide (CO2)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區平均NH3",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Ammonia (NH3)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區平均CH4",
+     "unit": "ppm 或 %LEL",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Methane (CH4)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風速",
+     "unit": "m/s",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Wind Speed",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風向",
+     "unit": "°",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Wind Direction",
+     "measurement_kind": "circular_angle",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區THI",
+     "unit": "指數",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Derived Index",
+     "sensor_type": "Temperature-Humidity Index (THI)",
+     "measurement_kind": "derived_index",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區 加開",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "成羊區 減開",
+     "unit": "狀態碼",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Actuator",
+     "sensor_type": "Device Actuator State",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "仔羊區THI",
+     "unit": "指數",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Derived Index",
+     "sensor_type": "Temperature-Humidity Index (THI)",
+     "measurement_kind": "derived_index",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  },
+  {
+   "id": "expert_system_c22",
+   "display_name": "專家系統 C22（魚塭）",
+   "domain_id": "aquaculture_pond",
+   "domain_type": "Water Quality",
+   "columns": [
+    {
+     "key": "pH1 即時值",
+     "unit": "pH",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "pH",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO1水溫",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Water Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "pH2 即時值",
+     "unit": "pH",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "pH",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "pH3 即時值",
+     "unit": "pH",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "pH",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ORP1 即時值",
+     "unit": "mV",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Oxidation-Reduction Potential (ORP)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ORP2 即時值",
+     "unit": "mV",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Oxidation-Reduction Potential (ORP)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "ORP3 即時值",
+     "unit": "mV",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Oxidation-Reduction Potential (ORP)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "SC1 即時值",
+     "unit": "ppt 或 mS/cm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Water Quality",
+     "sensor_type": "Salinity or Conductivity (SC, ambiguous)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "SC2 即時值",
+     "unit": "ppt 或 mS/cm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Water Quality",
+     "sensor_type": "Salinity or Conductivity (SC, ambiguous)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "SC3 即時值",
+     "unit": "ppt 或 mS/cm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Water Quality",
+     "sensor_type": "Salinity or Conductivity (SC, ambiguous)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO1 即時值",
+     "unit": "mg/L",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Dissolved Oxygen",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO2 即時值",
+     "unit": "mg/L",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Dissolved Oxygen",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO3 即時值",
+     "unit": "mg/L",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Dissolved Oxygen",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "OA4 溫度",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "OA4 濕度",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "OA4 大氣壓力",
+     "unit": "hPa",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Atmospheric Pressure",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "OA4 熱指數",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Derived Index",
+     "sensor_type": "Heat Index",
+     "measurement_kind": "derived_index",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "OA4 熱危害風險等級",
+     "unit": "等級",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Derived Index",
+     "sensor_type": "Heat Hazard Level",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "UW485 風速",
+     "unit": "m/s",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Wind Speed",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "UW485 風向",
+     "unit": "°",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Wind Direction",
+     "measurement_kind": "circular_angle",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "水位高度",
+     "unit": "m",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Water Quality",
+     "sensor_type": "Water Level",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 平均相電壓",
+     "unit": "V",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Phase Voltage",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 平均電流",
+     "unit": "A",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Electrical Current (load)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 總電流",
+     "unit": "A",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Electrical Current (load)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 系統總和功率",
+     "unit": "W",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Active Power",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 總和視在功率",
+     "unit": "VA",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Apparent Power",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 總和無功功率",
+     "unit": "var",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Reactive Power",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 總和功率因數",
+     "unit": "-",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Electrical",
+     "sensor_type": "Power Factor",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 頻率",
+     "unit": "Hz",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Electrical",
+     "sensor_type": "Grid Frequency",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 總用電度數",
+     "unit": "kWh 或 kvarh（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Cumulative Energy Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 釋放有功電度",
+     "unit": "kWh 或 kvarh（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Cumulative Energy Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 電感性無功電度",
+     "unit": "kWh 或 kvarh（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Cumulative Energy Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CPM 電容性無功電度",
+     "unit": "kWh 或 kvarh（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Electrical",
+     "sensor_type": "Cumulative Energy Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  },
+  {
+   "id": "sanyegong_creek",
+   "display_name": "仁德三爺宮溪（河川水質站）",
+   "domain_id": "river_water_station",
+   "domain_type": "Water Quality",
+   "columns": [
+    {
+     "key": "太陽能電壓",
+     "unit": "V",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Device Power",
+     "sensor_type": "Solar Panel Voltage",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "太陽能電流",
+     "unit": "A",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Device Power",
+     "sensor_type": "Solar Panel Current",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "充電電流",
+     "unit": "A",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Device Power",
+     "sensor_type": "Battery Charge Current",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "電池電量",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Device Power",
+     "sensor_type": "Battery Level",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "pH",
+     "unit": "pH",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "pH",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "pH斜率",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Calibration",
+     "sensor_type": "Calibration Slope",
+     "measurement_kind": "calibration_parameter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "EC",
+     "unit": "µS/cm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Water Quality",
+     "sensor_type": "Electrical Conductivity (EC)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "EC斜率",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Calibration",
+     "sensor_type": "Calibration Slope",
+     "measurement_kind": "calibration_parameter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO",
+     "unit": "mg/L",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Dissolved Oxygen",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "水溫",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Water Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO飽和度",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Water Quality",
+     "sensor_type": "Dissolved Oxygen Saturation",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "DO斜率",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Calibration",
+     "sensor_type": "Calibration Slope",
+     "measurement_kind": "calibration_parameter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "電池電壓(V)",
+     "unit": "V",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Device Power",
+     "sensor_type": "Battery Voltage",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  },
+  {
+   "id": "construction_site_cb13505",
+   "display_name": "工地微氣候 CB13505",
+   "domain_id": "construction_microclimate",
+   "domain_type": "Microclimate",
+   "columns": [
+    {
+     "key": "風速",
+     "unit": "m/s",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Wind Speed",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風向",
+     "unit": "°",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Wind Direction",
+     "measurement_kind": "circular_angle",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "溫度",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "濕度",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "熱指數",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Derived Index",
+     "sensor_type": "Heat Index",
+     "measurement_kind": "derived_index",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "危害等級",
+     "unit": "等級",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Derived Index",
+     "sensor_type": "Heat Hazard Level",
+     "measurement_kind": "state_code",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM2.5",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM2.5",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM10",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM10",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "噪音",
+     "unit": "dB(A)",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Environment",
+     "sensor_type": "Noise Level",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  },
+  {
+   "id": "northeast_corner",
+   "display_name": "東北角",
+   "domain_id": "air_quality_microclimate",
+   "domain_type": "Environmental Monitoring",
+   "columns": [
+    {
+     "key": "風速",
+     "unit": "m/s",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Wind Speed",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風向",
+     "unit": "°",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Wind Direction",
+     "measurement_kind": "circular_angle",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "TEMP",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "RH",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM2.5",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM2.5",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "HCHO",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Air Quality",
+     "sensor_type": "Formaldehyde (HCHO)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CO",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Air Quality",
+     "sensor_type": "Carbon Monoxide (CO)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "TVOC",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Total Volatile Organic Compounds (TVOC)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM10",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM10",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  },
+  {
+   "id": "rearing_plant_1",
+   "display_name": "育成一廠（檔名為「厰」、欄位前綴為「廠」）",
+   "domain_id": "air_quality_microclimate",
+   "domain_type": "Environmental Monitoring",
+   "columns": [
+    {
+     "key": "風速",
+     "unit": "m/s",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Wind Speed",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風向",
+     "unit": "°",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Wind Direction",
+     "measurement_kind": "circular_angle",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "TEMP",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "RH",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM2.5",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM2.5",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "HCHO",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Air Quality",
+     "sensor_type": "Formaldehyde (HCHO)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CO",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Air Quality",
+     "sensor_type": "Carbon Monoxide (CO)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM10",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM10",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "TVOC(PID)",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Total Volatile Organic Compounds (TVOC)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  },
+  {
+   "id": "rearing_plant_1_north",
+   "display_name": "育成一廠北側",
+   "domain_id": "air_quality_microclimate",
+   "domain_type": "Environmental Monitoring",
+   "columns": [
+    {
+     "key": "風速",
+     "unit": "m/s",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Weather",
+     "sensor_type": "Wind Speed",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "風向",
+     "unit": "°",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Weather",
+     "sensor_type": "Wind Direction",
+     "measurement_kind": "circular_angle",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "溫度",
+     "unit": "°C",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Air Temperature",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "濕度",
+     "unit": "%",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Climate",
+     "sensor_type": "Relative Humidity",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM2.5",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM2.5",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "HCHO",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Air Quality",
+     "sensor_type": "Formaldehyde (HCHO)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "CO",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Air Quality",
+     "sensor_type": "Carbon Monoxide (CO)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "TVOC PID",
+     "unit": "ppm",
+     "unit_status": "UNVERIFIED_INFERRED_LOW",
+     "category": "Air Quality",
+     "sensor_type": "Total Volatile Organic Compounds (TVOC)",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "PM10",
+     "unit": "µg/m³",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Air Quality",
+     "sensor_type": "Particulate Matter PM10",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "訊號強度",
+     "unit": "CSQ",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Device Health",
+     "sensor_type": "Signal Strength",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "運轉時間(秒)",
+     "unit": "秒（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Device Health",
+     "sensor_type": "Uptime Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "開機次數(次)",
+     "unit": "次（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Device Health",
+     "sensor_type": "Boot Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "送電時間(秒)",
+     "unit": "秒（累計）",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Device Health",
+     "sensor_type": "Uptime Counter",
+     "measurement_kind": "cumulative_counter",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "電池電壓(V)",
+     "unit": "V",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Device Power",
+     "sensor_type": "Battery Voltage",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "電壓(V)",
+     "unit": "V",
+     "unit_status": "UNVERIFIED_INFERRED_MEDIUM",
+     "category": "Device Power",
+     "sensor_type": "Supply Voltage",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    },
+    {
+     "key": "4G訊號(CSQ)",
+     "unit": "CSQ",
+     "unit_status": "UNVERIFIED_INFERRED_HIGH",
+     "category": "Device Health",
+     "sensor_type": "Signal Strength",
+     "measurement_kind": "continuous",
+     "unit_note": "單位是依欄位名稱推測，尚未經資料提供者確認"
+    }
+   ]
+  }
+ ]
+}

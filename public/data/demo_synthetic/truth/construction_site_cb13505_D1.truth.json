@@ -1,0 +1,23 @@
+{
+ "batch_id": "SYNTH-工地微氣候-D1-日常正常-2026040417-168h",
+ "domain": "工地微氣候",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 14,
+  "scenarios": [
+   "normal"
+  ],
+  "stem": "工地微氣候",
+  "start": "2026-04-04 17:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "365e2a1398b0f4a3",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-工地微氣候-D1-日常正常-2026040417-168h",
+  "demo_step": 1,
+  "demo_label": "日常正常"
+ },
+ "events": []
+}

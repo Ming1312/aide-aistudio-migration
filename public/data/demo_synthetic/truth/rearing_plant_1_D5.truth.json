@@ -1,0 +1,86 @@
+{
+ "batch_id": "SYNTH-育成一厰-D5-讀值卡住與斷線-2026092900-168h",
+ "domain": "育成一厰",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 11,
+  "scenarios": [
+   "stuck_sensor",
+   "outage"
+  ],
+  "stem": "育成一厰",
+  "start": "2026-09-29 00:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "70070fad19dd1fd4",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-育成一厰-D5-讀值卡住與斷線-2026092900-168h",
+  "demo_step": 5,
+  "demo_label": "讀值卡住與斷線"
+ },
+ "events": [
+  {
+   "event_id": "育成一厰#slow_drift#2026091600#TEMP",
+   "domain": "育成一厰",
+   "scenario": "slow_drift",
+   "type": "slow_drift",
+   "category": "anomaly",
+   "columns": [
+    "TEMP"
+   ],
+   "start": "2026-09-16 00:00:00",
+   "end": "2026-10-05 23:00:00",
+   "total_shift_sigma": -3.0,
+   "should_alert": true,
+   "step": 3,
+   "description": "緩慢漂移：10 天累積約 3 個標準差，每天只偏一點點"
+  },
+  {
+   "event_id": "育成一厰#stuck_sensor#2026092920#RH",
+   "domain": "育成一厰",
+   "scenario": "stuck_sensor",
+   "type": "stuck_sensor",
+   "category": "anomaly",
+   "columns": [
+    "RH"
+   ],
+   "start": "2026-09-29 20:00:00",
+   "end": "2026-10-01 01:00:00",
+   "should_alert": true,
+   "step": 5,
+   "description": "讀值卡住 30 小時"
+  },
+  {
+   "event_id": "育成一厰#stuck_sensor#2026100304#RH",
+   "domain": "育成一厰",
+   "scenario": "stuck_sensor",
+   "type": "stuck_sensor",
+   "category": "anomaly",
+   "columns": [
+    "RH"
+   ],
+   "start": "2026-10-03 04:00:00",
+   "end": "2026-10-04 09:00:00",
+   "should_alert": true,
+   "step": 5,
+   "description": "讀值卡住 30 小時"
+  },
+  {
+   "event_id": "育成一厰#outage#2026100112",
+   "domain": "育成一厰",
+   "scenario": "outage",
+   "type": "outage_missing_rows",
+   "category": "data_quality",
+   "columns": [
+    "*"
+   ],
+   "start": "2026-10-01 12:00:00",
+   "end": "2026-10-01 19:00:00",
+   "should_alert": true,
+   "step": 5,
+   "description": "整列缺失 8 小時（斷線）"
+  }
+ ]
+}

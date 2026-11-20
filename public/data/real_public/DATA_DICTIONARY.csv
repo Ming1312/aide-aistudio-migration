@@ -1,0 +1,125 @@
+﻿dataset_id,dataset,column,raw_header,unit,unit_status,category,description,n_observed,missing_frac,min,max,mean
+sheep_barn,羊舍（成羊區／仔羊區）,南右帆布張 23/24,DO22340 - 南右帆布張 23/24,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾展開指令/狀態；出現 0/1/2/4，2 與 4 的意義需確認,871,0.0,0.0,2.0,0.4856
+sheep_barn,羊舍（成羊區／仔羊區）,南右帆布收 23/24,DO22340 - 南右帆布收 23/24,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾收起指令/狀態,871,0.0,0.0,4.0,0.054
+sheep_barn,羊舍（成羊區／仔羊區）,南左帆布張 21/22,DO22340 - 南左帆布張 21/22,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾展開指令/狀態；出現 0/1/2/4，2 與 4 的意義需確認,871,0.0,0.0,2.0,0.0207
+sheep_barn,羊舍（成羊區／仔羊區）,南左帆布收 21/22,DO22340 - 南左帆布收 21/22,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾收起指令/狀態,871,0.0,0.0,4.0,0.0505
+sheep_barn,羊舍（成羊區／仔羊區）,北右帆布張 29/30,DO22340 - 北右帆布張 29/30,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾展開指令/狀態；出現 0/1/2/4，2 與 4 的意義需確認,871,0.0,0.0,2.0,0.0218
+sheep_barn,羊舍（成羊區／仔羊區）,北右帆布收 29/30,DO22340 - 北右帆布收 29/30,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾收起指令/狀態,871,0.0,0.0,4.0,0.0505
+sheep_barn,羊舍（成羊區／仔羊區）,北左帆布張 27/28,DO22340 - 北左帆布張 27/28,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾展開指令/狀態；出現 0/1/2/4，2 與 4 的意義需確認,871,0.0,0.0,2.0,0.0218
+sheep_barn,羊舍（成羊區／仔羊區）,北左帆布收 27/28,DO22340 - 北左帆布收 27/28,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾收起指令/狀態,871,0.0,0.0,4.0,0.0505
+sheep_barn,羊舍（成羊區／仔羊區）,西帆布張 31/32,DO22340 - 西帆布張 31/32,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾展開指令/狀態；出現 0/1/2/4，2 與 4 的意義需確認,871,0.0,0.0,2.0,0.0207
+sheep_barn,羊舍（成羊區／仔羊區）,西帆布收 31/32,DO22340 - 西帆布收 31/32,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,捲簾收起指令/狀態,871,0.0,0.0,4.0,0.0517
+sheep_barn,羊舍（成羊區／仔羊區）,南遮陽張 25/26,DO22340 - 南遮陽張 25/26,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,遮陽網展開,871,0.0,0.0,2.0,0.085
+sheep_barn,羊舍（成羊區／仔羊區）,南遮陽收 25/26,DO22340 - 南遮陽收 25/26,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,遮陽網收起,871,0.0,0.0,4.0,0.0459
+sheep_barn,羊舍（成羊區／仔羊區）,風扇-07,DO22340 - 風扇-07,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,風扇運轉狀態；0/1/4，4 的意義需確認,871,0.0,0.0,4.0,0.0551
+sheep_barn,羊舍（成羊區／仔羊區）,風扇-08,DO22340 - 風扇-08,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,風扇運轉狀態；0/1/4，4 的意義需確認,871,0.0,0.0,4.0,0.0333
+sheep_barn,羊舍（成羊區／仔羊區）,風扇-04,DO22340 - 風扇-04,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,風扇運轉狀態；0/1/4，4 的意義需確認,871,0.0,0.0,4.0,0.0551
+sheep_barn,羊舍（成羊區／仔羊區）,風扇-03,DO22340 - 風扇-03,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,風扇運轉狀態；0/1/4，4 的意義需確認,871,0.0,0.0,4.0,0.0551
+sheep_barn,羊舍（成羊區／仔羊區）,ID4-溫度,DO22340 - ID4-溫度,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫/舍內溫度,871,0.0,26.8,36.9,31.2037
+sheep_barn,羊舍（成羊區／仔羊區）,ID4-濕度,DO22340 - ID4-濕度,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,871,0.0,50.0,94.0,70.3077
+sheep_barn,羊舍（成羊區／仔羊區）,ID4-CO2,DO22340 - ID4-CO2,ppm,UNVERIFIED_INFERRED_HIGH,Air Quality,二氧化碳,871,0.0,364.0,487.0,408.8863
+sheep_barn,羊舍（成羊區／仔羊區）,ID4-NH3,DO22340 - ID4-NH3,ppm,UNVERIFIED_INFERRED_LOW,Air Quality,氨氣；數值極小，需確認單位,871,0.0,0.0,0.054,0.032
+sheep_barn,羊舍（成羊區／仔羊區）,ID4-CH4,DO22340 - ID4-CH4,ppm 或 %LEL,UNVERIFIED_INFERRED_LOW,Air Quality,甲烷；單位需確認,871,0.0,0.099,0.226,0.1695
+sheep_barn,羊舍（成羊區／仔羊區）,瞬間雨量,DO22340 - 瞬間雨量,mm,UNVERIFIED_INFERRED_MEDIUM,Weather,雨量,871,0.0,0.0,1.0,0.004
+sheep_barn,羊舍（成羊區／仔羊區）,10分鐘雨量,DO22340 - 10分鐘雨量,mm,UNVERIFIED_INFERRED_MEDIUM,Weather,雨量,871,0.0,0.0,10.5,0.0718
+sheep_barn,羊舍（成羊區／仔羊區）,1小時雨量,DO22340 - 1小時雨量,mm,UNVERIFIED_INFERRED_MEDIUM,Weather,雨量,871,0.0,0.0,32.5,0.3571
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區平均溫度,DO22340 - 成羊區平均溫度,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫/舍內溫度,871,0.0,26.3,36.3,30.3397
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區平均濕度,DO22340 - 成羊區平均濕度,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,871,0.0,51.5,94.3,73.6944
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區平均CO2,DO22340 - 成羊區平均CO2,ppm,UNVERIFIED_INFERRED_HIGH,Air Quality,二氧化碳,871,0.0,501.7,681.1,543.6278
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區平均NH3,DO22340 - 成羊區平均NH3,ppm,UNVERIFIED_INFERRED_LOW,Air Quality,氨氣；數值極小，需確認單位,871,0.0,0.0,0.0,0.0
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區平均CH4,DO22340 - 成羊區平均CH4,ppm 或 %LEL,UNVERIFIED_INFERRED_LOW,Air Quality,甲烷；單位需確認,871,0.0,0.1,0.3,0.2016
+sheep_barn,羊舍（成羊區／仔羊區）,風速,DO22340 - 風速,m/s,UNVERIFIED_INFERRED_MEDIUM,Weather,風速,871,0.0,0.0,4.2,0.101
+sheep_barn,羊舍（成羊區／仔羊區）,風向,DO22340 - 風向,°,UNVERIFIED_INFERRED_HIGH,Weather,風向（圓形變數：0 與 359 很接近）,871,0.0,0.0,348.0,138.7727
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區THI,DO22340 - 成羊區THI,指數,UNVERIFIED_INFERRED_HIGH,Derived Index,溫濕指數；已驗證與 NRC 公式相符,871,0.0,77.2,88.2,82.4184
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區 加開,DO22340 - 成羊區 加開,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,控制邏輯旗標,871,0.0,0.0,1.0,0.9736
+sheep_barn,羊舍（成羊區／仔羊區）,成羊區 減開,DO22340 - 成羊區 減開,狀態碼,UNVERIFIED_INFERRED_LOW,Actuator,控制邏輯旗標,871,0.0,0.0,0.0,0.0
+sheep_barn,羊舍（成羊區／仔羊區）,仔羊區THI,DO22340 - 仔羊區THI,指數,UNVERIFIED_INFERRED_HIGH,Derived Index,溫濕指數；已驗證與 NRC 公式相符,871,0.0,79.0,88.6,83.2288
+expert_system_c22,專家系統 C22（魚塭）,pH1 即時值,專家系統【C22】感測器主機 - pH1 即時值,pH,UNVERIFIED_INFERRED_HIGH,Water Quality,酸鹼值,2697,0.0004,0.0,8.99,7.3997
+expert_system_c22,專家系統 C22（魚塭）,DO1水溫,專家系統【C22】感測器主機 - DO1水溫,°C,UNVERIFIED_INFERRED_HIGH,Water Quality,DO 探頭內建水溫,2697,0.0004,0.0,32.7,29.7633
+expert_system_c22,專家系統 C22（魚塭）,pH2 即時值,專家系統【C22】感測器主機 - pH2 即時值,pH,UNVERIFIED_INFERRED_HIGH,Water Quality,酸鹼值,2697,0.0004,0.0,8.9,7.6301
+expert_system_c22,專家系統 C22（魚塭）,pH3 即時值,專家系統【C22】感測器主機 - pH3 即時值,pH,UNVERIFIED_INFERRED_HIGH,Water Quality,酸鹼值,2697,0.0004,0.0,8.54,7.6867
+expert_system_c22,專家系統 C22（魚塭）,ORP1 即時值,專家系統【C22】感測器主機 - ORP1 即時值,mV,UNVERIFIED_INFERRED_HIGH,Water Quality,氧化還原電位,2697,0.0004,0.0,496.9,418.6683
+expert_system_c22,專家系統 C22（魚塭）,ORP2 即時值,專家系統【C22】感測器主機 - ORP2 即時值,mV,UNVERIFIED_INFERRED_HIGH,Water Quality,氧化還原電位,2697,0.0004,0.0,503.2,406.8191
+expert_system_c22,專家系統 C22（魚塭）,ORP3 即時值,專家系統【C22】感測器主機 - ORP3 即時值,mV,UNVERIFIED_INFERRED_HIGH,Water Quality,氧化還原電位,2697,0.0004,0.0,504.3,414.8785
+expert_system_c22,專家系統 C22（魚塭）,SC1 即時值,專家系統【C22】感測器主機 - SC1 即時值,ppt 或 mS/cm,UNVERIFIED_INFERRED_LOW,Water Quality,推測為鹽度或比導電度，需確認,2697,0.0004,0.0,27.27,13.2293
+expert_system_c22,專家系統 C22（魚塭）,SC2 即時值,專家系統【C22】感測器主機 - SC2 即時值,ppt 或 mS/cm,UNVERIFIED_INFERRED_LOW,Water Quality,推測為鹽度或比導電度，需確認,2697,0.0004,0.0,30.15,13.7833
+expert_system_c22,專家系統 C22（魚塭）,SC3 即時值,專家系統【C22】感測器主機 - SC3 即時值,ppt 或 mS/cm,UNVERIFIED_INFERRED_LOW,Water Quality,推測為鹽度或比導電度，需確認,2697,0.0004,0.0,29.2,14.9947
+expert_system_c22,專家系統 C22（魚塭）,DO1 即時值,專家系統【C22】感測器主機 - DO1 即時值,mg/L,UNVERIFIED_INFERRED_HIGH,Water Quality,溶氧 Dissolved Oxygen,2697,0.0004,0.0,8.26,3.9216
+expert_system_c22,專家系統 C22（魚塭）,DO2 即時值,專家系統【C22】感測器主機 - DO2 即時值,mg/L,UNVERIFIED_INFERRED_HIGH,Water Quality,溶氧 Dissolved Oxygen,2697,0.0004,0.0,9.88,3.6627
+expert_system_c22,專家系統 C22（魚塭）,DO3 即時值,專家系統【C22】感測器主機 - DO3 即時值,mg/L,UNVERIFIED_INFERRED_HIGH,Water Quality,溶氧 Dissolved Oxygen,2697,0.0004,0.0,7.73,3.2421
+expert_system_c22,專家系統 C22（魚塭）,OA4 溫度,專家系統【C22】微氣候 - OA4 溫度,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫/舍內溫度,2697,0.0004,0.0,40.0,28.6495
+expert_system_c22,專家系統 C22（魚塭）,OA4 濕度,專家系統【C22】微氣候 - OA4 濕度,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,2697,0.0004,0.0,99.4,77.7507
+expert_system_c22,專家系統 C22（魚塭）,OA4 大氣壓力,專家系統【C22】微氣候 - OA4 大氣壓力,hPa,UNVERIFIED_INFERRED_HIGH,Weather,大氣壓,2697,0.0004,0.0,1011.6,951.8576
+expert_system_c22,專家系統 C22（魚塭）,OA4 熱指數,專家系統【C22】微氣候 - OA4 熱指數,°C,UNVERIFIED_INFERRED_MEDIUM,Derived Index,Heat Index,2697,0.0004,0.0,394.0,36.655
+expert_system_c22,專家系統 C22（魚塭）,OA4 熱危害風險等級,專家系統【C22】微氣候 - OA4 熱危害風險等級,等級,UNVERIFIED_INFERRED_MEDIUM,Derived Index,熱危害分級,2697,0.0004,0.0,4.0,2.3315
+expert_system_c22,專家系統 C22（魚塭）,UW485 風速,專家系統【C22】微氣候 - UW485 風速,m/s,UNVERIFIED_INFERRED_MEDIUM,Weather,風速,2697,0.0004,0.0,92.0,0.9551
+expert_system_c22,專家系統 C22（魚塭）,UW485 風向,專家系統【C22】微氣候 - UW485 風向,°,UNVERIFIED_INFERRED_HIGH,Weather,風向（圓形變數：0 與 359 很接近）,2697,0.0004,0.0,359.0,102.1624
+expert_system_c22,專家系統 C22（魚塭）,水位高度,專家系統【C22】魚塭 - 水位高度,m,UNVERIFIED_INFERRED_MEDIUM,Water Quality,魚塭水位,2697,0.0004,0.0,1.933,1.495
+expert_system_c22,專家系統 C22（魚塭）,CPM 平均相電壓,專家系統【C22】設備用電 - CPM 平均相電壓,V,UNVERIFIED_INFERRED_MEDIUM,Electrical,平均相電壓,2697,0.0004,0.0,143.5,134.9598
+expert_system_c22,專家系統 C22（魚塭）,CPM 平均電流,專家系統【C22】設備用電 - CPM 平均電流,A,UNVERIFIED_INFERRED_MEDIUM,Electrical,平均電流,2697,0.0004,0.0,3.41,2.8594
+expert_system_c22,專家系統 C22（魚塭）,CPM 總電流,專家系統【C22】設備用電 - CPM 總電流,A,UNVERIFIED_INFERRED_MEDIUM,Electrical,總電流,2697,0.0004,0.0,10.24,8.5783
+expert_system_c22,專家系統 C22（魚塭）,CPM 系統總和功率,專家系統【C22】設備用電 - CPM 系統總和功率,W,UNVERIFIED_INFERRED_MEDIUM,Electrical,有功功率,2697,0.0004,0.0,796.2,704.4975
+expert_system_c22,專家系統 C22（魚塭）,CPM 總和視在功率,專家系統【C22】設備用電 - CPM 總和視在功率,VA,UNVERIFIED_INFERRED_MEDIUM,Electrical,視在功率,2697,0.0004,0.0,1035.0,862.4354
+expert_system_c22,專家系統 C22（魚塭）,CPM 總和無功功率,專家系統【C22】設備用電 - CPM 總和無功功率,var,UNVERIFIED_INFERRED_MEDIUM,Electrical,無功功率,2697,0.0004,-44.5,15.6,-11.0585
+expert_system_c22,專家系統 C22（魚塭）,CPM 總和功率因數,專家系統【C22】設備用電 - CPM 總和功率因數,-,UNVERIFIED_INFERRED_HIGH,Electrical,功率因數,2697,0.0004,0.0,1.0,0.8163
+expert_system_c22,專家系統 C22（魚塭）,CPM 頻率,專家系統【C22】設備用電 - CPM 頻率,Hz,UNVERIFIED_INFERRED_HIGH,Electrical,電網頻率,2697,0.0004,0.0,60.1,59.7696
+expert_system_c22,專家系統 C22（魚塭）,CPM 總用電度數,專家系統【C22】設備用電 - CPM 總用電度數,kWh 或 kvarh（累計）,UNVERIFIED_INFERRED_MEDIUM,Electrical,累計電能計數器，只能遞增,2697,0.0004,0.0,2170.81,1175.5495
+expert_system_c22,專家系統 C22（魚塭）,CPM 釋放有功電度,專家系統【C22】設備用電 - CPM 釋放有功電度,kWh 或 kvarh（累計）,UNVERIFIED_INFERRED_MEDIUM,Electrical,累計電能計數器，只能遞增,2697,0.0004,0.0,0.0,0.0
+expert_system_c22,專家系統 C22（魚塭）,CPM 電感性無功電度,專家系統【C22】設備用電 - CPM 電感性無功電度,kWh 或 kvarh（累計）,UNVERIFIED_INFERRED_MEDIUM,Electrical,累計電能計數器，只能遞增,2697,0.0004,0.0,672.04,365.3594
+expert_system_c22,專家系統 C22（魚塭）,CPM 電容性無功電度,專家系統【C22】設備用電 - CPM 電容性無功電度,kWh 或 kvarh（累計）,UNVERIFIED_INFERRED_MEDIUM,Electrical,累計電能計數器，只能遞增,2697,0.0004,0.0,707.31,386.6374
+sanyegong_creek,仁德三爺宮溪（河川水質站）,太陽能電壓,仁德三爺宮溪 - 太陽能電壓,V,UNVERIFIED_INFERRED_MEDIUM,Device Power,太陽能板電壓,2881,0.0,0.1,21.0,5.5305
+sanyegong_creek,仁德三爺宮溪（河川水質站）,太陽能電流,仁德三爺宮溪 - 太陽能電流,A,UNVERIFIED_INFERRED_MEDIUM,Device Power,太陽能板電流,2881,0.0,0.0,0.8,0.1075
+sanyegong_creek,仁德三爺宮溪（河川水質站）,充電電流,仁德三爺宮溪 - 充電電流,A,UNVERIFIED_INFERRED_MEDIUM,Device Power,電池充電電流,2881,0.0,0.0,0.3,0.014
+sanyegong_creek,仁德三爺宮溪（河川水質站）,電池電量,仁德三爺宮溪 - 電池電量,%,UNVERIFIED_INFERRED_HIGH,Device Power,電池剩餘電量,2881,0.0,73.0,100.0,98.5932
+sanyegong_creek,仁德三爺宮溪（河川水質站）,pH,仁德三爺宮溪 - pH,pH,UNVERIFIED_INFERRED_HIGH,Water Quality,酸鹼值,2881,0.0,4.86,9.26,7.3403
+sanyegong_creek,仁德三爺宮溪（河川水質站）,pH斜率,仁德三爺宮溪 - pH斜率,%,UNVERIFIED_INFERRED_MEDIUM,Calibration,pH 探頭校正斜率,2881,0.0,100.0,105.6,101.0108
+sanyegong_creek,仁德三爺宮溪（河川水質站）,EC,仁德三爺宮溪 - EC,µS/cm,UNVERIFIED_INFERRED_MEDIUM,Water Quality,導電度,2881,0.0,0.0,3366.66,920.0256
+sanyegong_creek,仁德三爺宮溪（河川水質站）,EC斜率,仁德三爺宮溪 - EC斜率,%,UNVERIFIED_INFERRED_MEDIUM,Calibration,EC 探頭校正斜率,2881,0.0,98.8,100.0,99.7834
+sanyegong_creek,仁德三爺宮溪（河川水質站）,DO,仁德三爺宮溪 - DO,mg/L,UNVERIFIED_INFERRED_HIGH,Water Quality,溶氧 Dissolved Oxygen,2881,0.0,-0.91,17.36,3.1632
+sanyegong_creek,仁德三爺宮溪（河川水質站）,水溫,仁德三爺宮溪 - 水溫,°C,UNVERIFIED_INFERRED_HIGH,Water Quality,水溫,2881,0.0,12.5,37.6,21.3103
+sanyegong_creek,仁德三爺宮溪（河川水質站）,DO飽和度,仁德三爺宮溪 - DO飽和度,%,UNVERIFIED_INFERRED_HIGH,Water Quality,溶氧飽和百分比,2881,0.0,0.0,187.1,29.7824
+sanyegong_creek,仁德三爺宮溪（河川水質站）,DO斜率,仁德三爺宮溪 - DO斜率,%,UNVERIFIED_INFERRED_MEDIUM,Calibration,DO 探頭校正斜率；變動代表重新校正或設定被改,2881,0.0,100.0,114.5,104.6656
+sanyegong_creek,仁德三爺宮溪（河川水質站）,電池電壓(V),仁德三爺宮溪 - 電池電壓(V),V,UNVERIFIED_INFERRED_MEDIUM,Device Power,電池電壓,2881,0.0,6.6,8.6,8.2929
+construction_site_cb13505,工地微氣候 CB13505,風速,CB13505 - 風速,m/s,UNVERIFIED_INFERRED_MEDIUM,Weather,風速,2219,0.0,0.0,5.8,1.29
+construction_site_cb13505,工地微氣候 CB13505,風向,CB13505 - 風向,°,UNVERIFIED_INFERRED_HIGH,Weather,風向（圓形變數：0 與 359 很接近）,2219,0.0,0.0,359.0,200.566
+construction_site_cb13505,工地微氣候 CB13505,溫度,CB13505 - 溫度,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫/舍內溫度,2219,0.0,8.8,31.2,18.356
+construction_site_cb13505,工地微氣候 CB13505,濕度,CB13505 - 濕度,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,2219,0.0,36.0,97.6,76.4822
+construction_site_cb13505,工地微氣候 CB13505,熱指數,CB13505 - 熱指數,°C,UNVERIFIED_INFERRED_MEDIUM,Derived Index,Heat Index,2219,0.0,0.0,36.7,1.0512
+construction_site_cb13505,工地微氣候 CB13505,危害等級,CB13505 - 危害等級,等級,UNVERIFIED_INFERRED_MEDIUM,Derived Index,熱危害分級,2219,0.0,0.0,2.0,0.041
+construction_site_cb13505,工地微氣候 CB13505,PM2.5,CB13505 - PM2.5,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,細懸浮微粒,2219,0.0,1.8,968.2,29.7548
+construction_site_cb13505,工地微氣候 CB13505,PM10,CB13505 - PM10,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,懸浮微粒,2219,0.0,3.7,1200.0,72.2105
+construction_site_cb13505,工地微氣候 CB13505,噪音,CB13505 - 噪音,dB(A),UNVERIFIED_INFERRED_HIGH,Environment,噪音,2219,0.0,39.1,93.6,52.3873
+northeast_corner,東北角,風速,東北角 - 風速,m/s,UNVERIFIED_INFERRED_MEDIUM,Weather,風速,2026,0.0,0.0,10.5,1.4673
+northeast_corner,東北角,風向,東北角 - 風向,°,UNVERIFIED_INFERRED_HIGH,Weather,風向（圓形變數：0 與 359 很接近）,2026,0.0,0.0,359.0,192.5499
+northeast_corner,東北角,TEMP,東北角 - TEMP,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫,2026,0.0,-2.8,33.1,27.7253
+northeast_corner,東北角,RH,東北角 - RH,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,2026,0.0,0.0,100.0,85.6217
+northeast_corner,東北角,PM2.5,東北角 - PM2.5,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,細懸浮微粒,2026,0.0,1.8,59.5,12.8824
+northeast_corner,東北角,HCHO,東北角 - HCHO,ppm,UNVERIFIED_INFERRED_MEDIUM,Air Quality,甲醛,2026,0.0,0.0,0.247,0.0013
+northeast_corner,東北角,CO,東北角 - CO,ppm,UNVERIFIED_INFERRED_MEDIUM,Air Quality,一氧化碳,2026,0.0,0.0,48.5,0.3159
+northeast_corner,東北角,TVOC,東北角 - TVOC,ppm,UNVERIFIED_INFERRED_LOW,Air Quality,總揮發性有機物；單位/量程需確認,2026,0.0,0.0,300.0,1.5388
+northeast_corner,東北角,PM10,東北角 - PM10,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,懸浮微粒,2026,0.0,5.9,119.6,34.9217
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,風速,育成一廠 - 風速,m/s,UNVERIFIED_INFERRED_MEDIUM,Weather,風速,2204,0.0,0.0,8.6,1.3956
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,風向,育成一廠 - 風向,°,UNVERIFIED_INFERRED_HIGH,Weather,風向（圓形變數：0 與 359 很接近）,2204,0.0,0.0,359.0,211.1933
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,TEMP,育成一廠 - TEMP,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫,2204,0.0,24.5,37.3,30.0693
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,RH,育成一廠 - RH,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,2204,0.0,32.5,99.0,79.9047
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,PM2.5,育成一廠 - PM2.5,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,細懸浮微粒,2204,0.0,1.8,75.9,12.6502
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,HCHO,育成一廠 - HCHO,ppm,UNVERIFIED_INFERRED_MEDIUM,Air Quality,甲醛,2204,0.0,0.0,0.134,0.0085
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,CO,育成一廠 - CO,ppm,UNVERIFIED_INFERRED_MEDIUM,Air Quality,一氧化碳,2204,0.0,0.0,57.6,8.697
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,PM10,育成一廠 - PM10,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,懸浮微粒,2204,0.0,0.0,140.4,32.6122
+rearing_plant_1,育成一廠（檔名為「厰」、欄位前綴為「廠」）,TVOC(PID),育成一廠 - TVOC(PID),ppm,UNVERIFIED_INFERRED_LOW,Air Quality,總揮發性有機物；單位/量程需確認,2204,0.0,0.0,42.787,0.2319
+rearing_plant_1_north,育成一廠北側,風速,育成一廠北側 - 風速,m/s,UNVERIFIED_INFERRED_MEDIUM,Weather,風速,370,0.0439,0.0,9.4,2.0773
+rearing_plant_1_north,育成一廠北側,風向,育成一廠北側 - 風向,°,UNVERIFIED_INFERRED_HIGH,Weather,風向（圓形變數：0 與 359 很接近）,370,0.0439,1.0,359.0,193.8595
+rearing_plant_1_north,育成一廠北側,溫度,育成一廠北側 - 溫度,°C,UNVERIFIED_INFERRED_HIGH,Climate,氣溫/舍內溫度,370,0.0439,0.0,31.6,25.4395
+rearing_plant_1_north,育成一廠北側,濕度,育成一廠北側 - 濕度,%,UNVERIFIED_INFERRED_HIGH,Climate,相對濕度,370,0.0439,0.0,100.0,87.2886
+rearing_plant_1_north,育成一廠北側,PM2.5,育成一廠北側 - PM2.5,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,細懸浮微粒,370,0.0439,0.0,56.1,12.553
+rearing_plant_1_north,育成一廠北側,HCHO,育成一廠北側 - HCHO,ppm,UNVERIFIED_INFERRED_MEDIUM,Air Quality,甲醛,370,0.0439,0.0,2.0,0.2224
+rearing_plant_1_north,育成一廠北側,CO,育成一廠北側 - CO,ppm,UNVERIFIED_INFERRED_MEDIUM,Air Quality,一氧化碳,370,0.0439,0.0,31.4,2.8359
+rearing_plant_1_north,育成一廠北側,TVOC PID,育成一廠北側 - TVOC PID,ppm,UNVERIFIED_INFERRED_LOW,Air Quality,總揮發性有機物；單位/量程需確認,370,0.0439,0.0,0.557,0.1537
+rearing_plant_1_north,育成一廠北側,PM10,育成一廠北側 - PM10,µg/m³,UNVERIFIED_INFERRED_HIGH,Air Quality,懸浮微粒,370,0.0439,0.0,114.8,31.9343
+rearing_plant_1_north,育成一廠北側,訊號強度,育成一廠北側 - 訊號強度,CSQ,UNVERIFIED_INFERRED_HIGH,Device Health,4G 訊號強度 CSQ（0–31）,370,0.0439,0.0,31.0,28.6243
+rearing_plant_1_north,育成一廠北側,運轉時間(秒),育成一廠北側 - 運轉時間(秒),秒（累計）,UNVERIFIED_INFERRED_HIGH,Device Health,開機後累計運轉秒數；歸零代表重開機,355,0.0827,181.0,694292.0,229535.0197
+rearing_plant_1_north,育成一廠北側,開機次數(次),育成一廠北側 - 開機次數(次),次（累計）,UNVERIFIED_INFERRED_HIGH,Device Health,累計開機次數；增加代表重開機,355,0.0827,242.0,246.0,242.9268
+rearing_plant_1_north,育成一廠北側,送電時間(秒),育成一廠北側 - 送電時間(秒),秒（累計）,UNVERIFIED_INFERRED_HIGH,Device Health,送電累計秒數,355,0.0827,181.0,694292.0,229535.0197
+rearing_plant_1_north,育成一廠北側,電池電壓(V),育成一廠北側 - 電池電壓(V),V,UNVERIFIED_INFERRED_MEDIUM,Device Power,電池電壓,370,0.0439,8.2,8.6,8.3743
+rearing_plant_1_north,育成一廠北側,電壓(V),育成一廠北側 - 電壓(V),V,UNVERIFIED_INFERRED_MEDIUM,Device Power,供電電壓,370,0.0439,12.0,12.0,12.0
+rearing_plant_1_north,育成一廠北側,4G訊號(CSQ),育成一廠北側 - 4G訊號(CSQ),CSQ,UNVERIFIED_INFERRED_HIGH,Device Health,4G 訊號強度 CSQ（0–31）,370,0.0439,0.0,31.0,28.6243

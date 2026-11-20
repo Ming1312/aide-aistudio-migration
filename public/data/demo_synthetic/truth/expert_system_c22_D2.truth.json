@@ -1,0 +1,41 @@
+{
+ "batch_id": "SYNTH-專家系統-D2-環境改變-2026100522-168h",
+ "domain": "專家系統",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 11,
+  "scenarios": [
+   "unusual_benign"
+  ],
+  "stem": "專家系統",
+  "start": "2026-10-05 22:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "41613bb84dcdb060",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-專家系統-D2-環境改變-2026100522-168h",
+  "demo_step": 2,
+  "demo_label": "環境改變"
+ },
+ "events": [
+  {
+   "event_id": "SYNTH-專家系統-unusual_benign-s11-2026092822-840h-story#heatwave#2026101205#OA4 溫度",
+   "batch_id": "SYNTH-專家系統-unusual_benign-s11-2026092822-840h-story",
+   "domain": "專家系統",
+   "scenario": "unusual_benign",
+   "type": "heatwave",
+   "category": "benign_unusual",
+   "columns": [
+    "OA4 溫度"
+   ],
+   "start": "2026-10-12 05:00:00",
+   "end": "2026-10-15 13:00:00",
+   "description": "正常但不尋常的環境／負載變化",
+   "should_alert": false,
+   "generator_seed": 11,
+   "step": 2
+  }
+ ]
+}

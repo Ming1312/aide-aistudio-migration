@@ -1,0 +1,614 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "AIDE Python API",
+  "version": "aistudio-1.0.0 (來源平台 1.1.0-rc3)",
+  "description": "AIDE Python 引擎（唯讀部分）。已實作並驗收；寫入類端點見 docs/04_API_CONTRACT.md（PLANNED）。"
+ },
+ "paths": {
+  "/health": {
+   "get": {
+    "summary": "Health",
+    "description": "不需金鑰。回報版本與資料雜湊，供網站啟動時檢查『API 與資料是否對得上』。",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/datasets": {
+   "get": {
+    "summary": "Datasets",
+    "operationId": "datasets_v1_datasets_get",
+    "parameters": [
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/datasets/{dataset_id}/series": {
+   "get": {
+    "summary": "Series",
+    "operationId": "series_v1_datasets__dataset_id__series_get",
+    "parameters": [
+     {
+      "name": "dataset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Dataset Id"
+      }
+     },
+     {
+      "name": "columns",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "逗號分隔的欄位名稱（最多 12 個）",
+       "title": "Columns"
+      },
+      "description": "逗號分隔的欄位名稱（最多 12 個）"
+     },
+     {
+      "name": "start",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Start"
+      }
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "End"
+      }
+     },
+     {
+      "name": "resample",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(none|1D)$",
+       "default": "none",
+       "title": "Resample"
+      }
+     },
+     {
+      "name": "max_points",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 10,
+       "default": 3000,
+       "title": "Max Points"
+      }
+     },
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/datasets/{dataset_id}/quality": {
+   "get": {
+    "summary": "Quality",
+    "operationId": "quality_v1_datasets__dataset_id__quality_get",
+    "parameters": [
+     {
+      "name": "dataset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Dataset Id"
+      }
+     },
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/datasets/{dataset_id}/anomalies": {
+   "get": {
+    "summary": "Anomalies",
+    "operationId": "anomalies_v1_datasets__dataset_id__anomalies_get",
+    "parameters": [
+     {
+      "name": "dataset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Dataset Id"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 300,
+       "minimum": 1,
+       "default": 80,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/forecast/tasks": {
+   "get": {
+    "summary": "Forecast Tasks",
+    "operationId": "forecast_tasks_v1_forecast_tasks_get",
+    "parameters": [
+     {
+      "name": "dataset_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dataset Id"
+      }
+     },
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/forecast": {
+   "post": {
+    "summary": "Forecast",
+    "operationId": "forecast_v1_forecast_post",
+    "parameters": [
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ForecastReq"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/formal/sheep-thi": {
+   "post": {
+    "summary": "Formal Sheep",
+    "operationId": "formal_sheep_v1_formal_sheep_thi_post",
+    "parameters": [
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FormalReq"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "ForecastReq": {
+    "properties": {
+     "dataset_id": {
+      "type": "string",
+      "title": "Dataset Id"
+     },
+     "sensor": {
+      "type": "string",
+      "title": "Sensor"
+     },
+     "horizon_h": {
+      "type": "integer",
+      "maximum": 6.0,
+      "minimum": 1.0,
+      "title": "Horizon H"
+     },
+     "origin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Origin",
+      "description": "預測起點（整點，例如 2026-08-10 12:00:00）；省略＝資料最後一個可用的起點"
+     },
+     "history_hours": {
+      "type": "integer",
+      "maximum": 168.0,
+      "minimum": 6.0,
+      "title": "History Hours",
+      "default": 72
+     }
+    },
+    "type": "object",
+    "required": [
+     "dataset_id",
+     "sensor",
+     "horizon_h"
+    ],
+    "title": "ForecastReq"
+   },
+   "FormalReq": {
+    "properties": {
+     "as_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "As Of",
+      "description": "預測時間點（整點）；省略＝資料最後一筆"
+     },
+     "mode": {
+      "type": "string",
+      "pattern": "^(strict|full)$",
+      "title": "Mode",
+      "description": "strict＝只用『當時已經存在』的凍結模型（嚴格歷史回測）；full＝全資料模型（只供示範，樣本內）",
+      "default": "strict"
+     }
+    },
+    "type": "object",
+    "title": "FormalReq"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  },
+  "securitySchemes": {
+   "ApiKey": {
+    "type": "apiKey",
+    "in": "header",
+    "name": "X-API-Key"
+   }
+  }
+ },
+ "servers": [
+  {
+   "url": "${ENGINE_BASE_URL}"
+  }
+ ]
+}

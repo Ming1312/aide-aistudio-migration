@@ -1,0 +1,40 @@
+{
+ "batch_id": "SYNTH-專家系統-D4-漂移持續-2026101922-168h",
+ "domain": "專家系統",
+ "meta": {
+  "source": "synthetic",
+  "generator": "p586-synth-v2",
+  "seed": 11,
+  "scenarios": [
+   "slow_drift"
+  ],
+  "stem": "專家系統",
+  "start": "2026-10-19 22:00:00",
+  "hours": 168,
+  "intensity": 1.0,
+  "continues_real_data": true,
+  "real_raw_sha16": "41613bb84dcdb060",
+  "note": "合成資料：不是真實資料，不得作為真實模型效能的驗證證據。",
+  "batch_id": "SYNTH-專家系統-D4-漂移持續-2026101922-168h",
+  "demo_step": 4,
+  "demo_label": "漂移持續"
+ },
+ "events": [
+  {
+   "event_id": "專家系統#slow_drift#2026101322#pH1 即時值",
+   "domain": "專家系統",
+   "scenario": "slow_drift",
+   "type": "slow_drift",
+   "category": "anomaly",
+   "columns": [
+    "pH1 即時值"
+   ],
+   "start": "2026-10-13 22:00:00",
+   "end": "2026-11-02 21:00:00",
+   "total_shift_sigma": 3.0,
+   "should_alert": true,
+   "step": 3,
+   "description": "緩慢漂移：10 天累積約 3 個標準差，每天只偏一點點"
+  }
+ ]
+}

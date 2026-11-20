@@ -1,0 +1,612 @@
+{
+ "schema": "aide-demo-synthetic-v1",
+ "data_kind": "synthetic",
+ "banner": "合成（模擬）展示資料：不是真實資料，不能用來證明任何模型在真實世界的表現。",
+ "purpose": "競賽展示（合成資料；不是真實資料）",
+ "week_hours": 168,
+ "seed": 7,
+ "domains": [
+  {
+   "id": "sheep_barn",
+   "stem": "羊舍",
+   "display_name": "羊舍（成羊區／仔羊區）",
+   "domain_type": "Livestock Environment",
+   "story": {
+    "environment_event": [
+     "heatwave"
+    ],
+    "drift_column": "ID4-溫度",
+    "stuck_column": "ID4-CO2",
+    "seed": 10
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-羊舍-D1-日常正常-2026081315-168h",
+     "file": "demo_synthetic/sheep_barn/D1.csv",
+     "rows": 168,
+     "start": "2026-08-13 15:00:00",
+     "end": "2026-08-20 14:00:00",
+     "sha256": "bb2a7cb8b53029670534bb015014235216587fe362b72d73f008dde57e89ef2b",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-羊舍-D2-環境改變-2026082015-168h",
+     "file": "demo_synthetic/sheep_barn/D2.csv",
+     "rows": 168,
+     "start": "2026-08-20 15:00:00",
+     "end": "2026-08-27 14:00:00",
+     "sha256": "391da5d30a342a308457022ed5f4f65e87dd6e17edaadf9930cffae6b1396263",
+     "pre_imported": false,
+     "truth_events": 0
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-羊舍-D3-感測器開始漂移-2026082715-168h",
+     "file": "demo_synthetic/sheep_barn/D3.csv",
+     "rows": 168,
+     "start": "2026-08-27 15:00:00",
+     "end": "2026-09-03 14:00:00",
+     "sha256": "3ded27aab030137ab1f15bb17beb16ba02e7a9a66385fe074ab68dd741663f5e",
+     "pre_imported": false,
+     "truth_events": 2
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-羊舍-D4-漂移持續-2026090315-168h",
+     "file": "demo_synthetic/sheep_barn/D4.csv",
+     "rows": 168,
+     "start": "2026-09-03 15:00:00",
+     "end": "2026-09-10 14:00:00",
+     "sha256": "05cf548410c3ea8a1538fd5df78086440a8e720af5ade98b102662cd3f8a3a77",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-羊舍-D5-讀值卡住與斷線-2026091015-168h",
+     "file": "demo_synthetic/sheep_barn/D5.csv",
+     "rows": 160,
+     "start": "2026-09-10 15:00:00",
+     "end": "2026-09-17 14:00:00",
+     "sha256": "947c07fec0ca93139161a1e49cc97ce368e7536d15448c9378713ee656a69862",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  },
+  {
+   "id": "expert_system_c22",
+   "stem": "專家系統",
+   "display_name": "專家系統 C22（魚塭）",
+   "domain_type": "Water Quality",
+   "story": {
+    "environment_event": [
+     "heatwave"
+    ],
+    "drift_column": "pH1 即時值",
+    "stuck_column": "pH2 即時值",
+    "seed": 11
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-專家系統-D1-日常正常-2026092822-168h",
+     "file": "demo_synthetic/expert_system_c22/D1.csv",
+     "rows": 168,
+     "start": "2026-09-28 22:00:00",
+     "end": "2026-10-05 21:00:00",
+     "sha256": "1810158b081fabe4a8a132f695b6b3c98ba863f1f1bbca5590408363934b273a",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-專家系統-D2-環境改變-2026100522-168h",
+     "file": "demo_synthetic/expert_system_c22/D2.csv",
+     "rows": 168,
+     "start": "2026-10-05 22:00:00",
+     "end": "2026-10-12 21:00:00",
+     "sha256": "5efe695504abeb69049bbab42bddfc0449a3412bf670026091cf30e9f331ee74",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-專家系統-D3-感測器開始漂移-2026101222-168h",
+     "file": "demo_synthetic/expert_system_c22/D3.csv",
+     "rows": 168,
+     "start": "2026-10-12 22:00:00",
+     "end": "2026-10-19 21:00:00",
+     "sha256": "da72eec25db666373bb30c8aade74fa9bfc224fcb950ad61cfed8431d58f00a9",
+     "pre_imported": false,
+     "truth_events": 2
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-專家系統-D4-漂移持續-2026101922-168h",
+     "file": "demo_synthetic/expert_system_c22/D4.csv",
+     "rows": 168,
+     "start": "2026-10-19 22:00:00",
+     "end": "2026-10-26 21:00:00",
+     "sha256": "ddbaec20ecb87d27f9f884657d079d71857b26ad440c22af71e6e1ad6d0b1098",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-專家系統-D5-讀值卡住與斷線-2026102622-168h",
+     "file": "demo_synthetic/expert_system_c22/D5.csv",
+     "rows": 160,
+     "start": "2026-10-26 22:00:00",
+     "end": "2026-11-02 21:00:00",
+     "sha256": "0a20c115893259c9769971c2ea5245fe5f8dfcbadb03fb5041270d6ca6daa03b",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  },
+  {
+   "id": "sanyegong_creek",
+   "stem": "三爺宮溪",
+   "display_name": "仁德三爺宮溪（河川水質站）",
+   "domain_type": "Water Quality",
+   "story": {
+    "environment_event": [
+     "storm"
+    ],
+    "drift_column": "pH",
+    "stuck_column": "水溫",
+    "seed": 1
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-三爺宮溪-D1-日常正常-2026050101-168h",
+     "file": "demo_synthetic/sanyegong_creek/D1.csv",
+     "rows": 168,
+     "start": "2026-05-01 01:00:00",
+     "end": "2026-05-08 00:00:00",
+     "sha256": "9ceab5e75f44cde50e23031d1d486cc9c046811e608cddc87cb90970fe1cbf7b",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-三爺宮溪-D2-環境改變-2026050801-168h",
+     "file": "demo_synthetic/sanyegong_creek/D2.csv",
+     "rows": 168,
+     "start": "2026-05-08 01:00:00",
+     "end": "2026-05-15 00:00:00",
+     "sha256": "9f3ae483c6d16a8ab486fe6a89774dff9a7c400e3f4f68296c73d5d4aa91518f",
+     "pre_imported": false,
+     "truth_events": 0
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-三爺宮溪-D3-感測器開始漂移-2026051501-168h",
+     "file": "demo_synthetic/sanyegong_creek/D3.csv",
+     "rows": 168,
+     "start": "2026-05-15 01:00:00",
+     "end": "2026-05-22 00:00:00",
+     "sha256": "782b3f091668605c8e561d220d350b35903824bf94b595d519324c81aec1251c",
+     "pre_imported": false,
+     "truth_events": 2
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-三爺宮溪-D4-漂移持續-2026052201-168h",
+     "file": "demo_synthetic/sanyegong_creek/D4.csv",
+     "rows": 168,
+     "start": "2026-05-22 01:00:00",
+     "end": "2026-05-29 00:00:00",
+     "sha256": "404c410efe9ad2367b63b6282c188ba1e1647d61f97e362d0f4faa7e9bb85a80",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-三爺宮溪-D5-讀值卡住與斷線-2026052901-168h",
+     "file": "demo_synthetic/sanyegong_creek/D5.csv",
+     "rows": 160,
+     "start": "2026-05-29 01:00:00",
+     "end": "2026-06-05 00:00:00",
+     "sha256": "6e166c58828e0bb381ce7cb71895e9ae8388ae61a7ce1c01f970c1f1404d6440",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  },
+  {
+   "id": "construction_site_cb13505",
+   "stem": "工地微氣候",
+   "display_name": "工地微氣候 CB13505",
+   "domain_type": "Microclimate",
+   "story": {
+    "environment_event": [
+     "heatwave"
+    ],
+    "drift_column": "溫度",
+    "stuck_column": "濕度",
+    "seed": 14
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-工地微氣候-D1-日常正常-2026040417-168h",
+     "file": "demo_synthetic/construction_site_cb13505/D1.csv",
+     "rows": 168,
+     "start": "2026-04-04 17:00:00",
+     "end": "2026-04-11 16:00:00",
+     "sha256": "15e3e700901b1e0ca6c59902b13352f2a37cd4628400caed2ed8abb9c1b4934c",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-工地微氣候-D2-環境改變-2026041117-168h",
+     "file": "demo_synthetic/construction_site_cb13505/D2.csv",
+     "rows": 168,
+     "start": "2026-04-11 17:00:00",
+     "end": "2026-04-18 16:00:00",
+     "sha256": "6b6a8dd1e0896e06a6d79a5851baccc3cfe8ffba1a6da6393dc18a9b622b5a39",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-工地微氣候-D3-感測器開始漂移-2026041817-168h",
+     "file": "demo_synthetic/construction_site_cb13505/D3.csv",
+     "rows": 168,
+     "start": "2026-04-18 17:00:00",
+     "end": "2026-04-25 16:00:00",
+     "sha256": "c217e51043dac2de3113a3b5ed689bfa04d5daa316a377fce3bdb25ed3863319",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-工地微氣候-D4-漂移持續-2026042517-168h",
+     "file": "demo_synthetic/construction_site_cb13505/D4.csv",
+     "rows": 168,
+     "start": "2026-04-25 17:00:00",
+     "end": "2026-05-02 16:00:00",
+     "sha256": "ca92c7134cdfd8912fde9fc4989d182d341160f9a2849c1971a23c0d98c25e0c",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-工地微氣候-D5-讀值卡住與斷線-2026050217-168h",
+     "file": "demo_synthetic/construction_site_cb13505/D5.csv",
+     "rows": 160,
+     "start": "2026-05-02 17:00:00",
+     "end": "2026-05-09 16:00:00",
+     "sha256": "58b84000b81dcf89248fee0324746ef65f33d2feb9acd723434793258b476c8f",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  },
+  {
+   "id": "northeast_corner",
+   "stem": "東北角",
+   "display_name": "東北角",
+   "domain_type": "Environmental Monitoring",
+   "story": {
+    "environment_event": [
+     "heatwave"
+    ],
+    "drift_column": "TEMP",
+    "stuck_column": "RH",
+    "seed": 3
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-東北角-D1-日常正常-2026082410-168h",
+     "file": "demo_synthetic/northeast_corner/D1.csv",
+     "rows": 168,
+     "start": "2026-08-24 10:00:00",
+     "end": "2026-08-31 09:00:00",
+     "sha256": "5aa80c028b7e59fd4947fa5cd82be594a5ca4cb4fb43c53678d9c16e88274e03",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-東北角-D2-環境改變-2026083110-168h",
+     "file": "demo_synthetic/northeast_corner/D2.csv",
+     "rows": 168,
+     "start": "2026-08-31 10:00:00",
+     "end": "2026-09-07 09:00:00",
+     "sha256": "102633e1049b1c9febf1f9496446add675246b31745bf599bedf6d65df3c6dbf",
+     "pre_imported": false,
+     "truth_events": 0
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-東北角-D3-感測器開始漂移-2026090710-168h",
+     "file": "demo_synthetic/northeast_corner/D3.csv",
+     "rows": 168,
+     "start": "2026-09-07 10:00:00",
+     "end": "2026-09-14 09:00:00",
+     "sha256": "0d954f8268c03560cd35c65b3c99221987c056be410df0ed3e1b5af99853da48",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-東北角-D4-漂移持續-2026091410-168h",
+     "file": "demo_synthetic/northeast_corner/D4.csv",
+     "rows": 168,
+     "start": "2026-09-14 10:00:00",
+     "end": "2026-09-21 09:00:00",
+     "sha256": "227e02f8ade93033fb4434020c473978663c59a267dc6e7becb731f86b2cd6a9",
+     "pre_imported": false,
+     "truth_events": 2
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-東北角-D5-讀值卡住與斷線-2026092110-168h",
+     "file": "demo_synthetic/northeast_corner/D5.csv",
+     "rows": 160,
+     "start": "2026-09-21 10:00:00",
+     "end": "2026-09-28 09:00:00",
+     "sha256": "43abbc37fd13b6e02dfc2b381b52fb725a628a3ea70504db5592cd27928691b1",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  },
+  {
+   "id": "rearing_plant_1",
+   "stem": "育成一厰",
+   "display_name": "育成一廠（檔名為「厰」、欄位前綴為「廠」）",
+   "domain_type": "Environmental Monitoring",
+   "story": {
+    "environment_event": [
+     "heatwave"
+    ],
+    "drift_column": "TEMP",
+    "stuck_column": "RH",
+    "seed": 11
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-育成一厰-D1-日常正常-2026090100-168h",
+     "file": "demo_synthetic/rearing_plant_1/D1.csv",
+     "rows": 168,
+     "start": "2026-09-01 00:00:00",
+     "end": "2026-09-07 23:00:00",
+     "sha256": "dd644c5ddd65cf1a1a79d884f344d719c32b6a79fa7431608b7152c307443212",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-育成一厰-D2-環境改變-2026090800-168h",
+     "file": "demo_synthetic/rearing_plant_1/D2.csv",
+     "rows": 168,
+     "start": "2026-09-08 00:00:00",
+     "end": "2026-09-14 23:00:00",
+     "sha256": "20744c39c4230df58d40f92d8fab586e609d2d5e181f7d3830c3e9d59fe35e7b",
+     "pre_imported": false,
+     "truth_events": 0
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-育成一厰-D3-感測器開始漂移-2026091500-168h",
+     "file": "demo_synthetic/rearing_plant_1/D3.csv",
+     "rows": 168,
+     "start": "2026-09-15 00:00:00",
+     "end": "2026-09-21 23:00:00",
+     "sha256": "5d276fc1fa6db7329ade432146f5a982734c53e6520ac61e046e70e114e385ea",
+     "pre_imported": false,
+     "truth_events": 2
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-育成一厰-D4-漂移持續-2026092200-168h",
+     "file": "demo_synthetic/rearing_plant_1/D4.csv",
+     "rows": 168,
+     "start": "2026-09-22 00:00:00",
+     "end": "2026-09-28 23:00:00",
+     "sha256": "4d901b9fd750fbd926d1edbad52476e1d6bb44bf70c647eed382059de0a75699",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-育成一厰-D5-讀值卡住與斷線-2026092900-168h",
+     "file": "demo_synthetic/rearing_plant_1/D5.csv",
+     "rows": 160,
+     "start": "2026-09-29 00:00:00",
+     "end": "2026-10-05 23:00:00",
+     "sha256": "18d23d414f3eb2c564f331c193050d3f7bd19f7c9daa6508c2b49a488da421e7",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  },
+  {
+   "id": "rearing_plant_1_north",
+   "stem": "育成北側",
+   "display_name": "育成一廠北側",
+   "domain_type": "Environmental Monitoring",
+   "story": {
+    "environment_event": [
+     "heatwave"
+    ],
+    "drift_column": "溫度",
+    "stuck_column": "濕度",
+    "seed": 2
+   },
+   "batches": [
+    {
+     "step": 1,
+     "code": "D1",
+     "label": "日常正常",
+     "story": "一個星期的正常資料（已預先匯入）。",
+     "batch_id": "SYNTH-育成北側-D1-日常正常-2026090100-168h",
+     "file": "demo_synthetic/rearing_plant_1_north/D1.csv",
+     "rows": 168,
+     "start": "2026-09-01 00:00:00",
+     "end": "2026-09-07 23:00:00",
+     "sha256": "36e7a1111b6a7ebf32be2c5e411bd3a041bb5edfb415b7f97e1f9852a8b10022",
+     "pre_imported": true,
+     "truth_events": 0
+    },
+    {
+     "step": 2,
+     "code": "D2",
+     "label": "環境改變",
+     "story": "天氣造成整體環境改變（例如熱浪），相關感測器一起變動。這是真實的現場變化，不是感測器故障；系統應該把它當成『環境變化』，而不是故障警報。",
+     "batch_id": "SYNTH-育成北側-D2-環境改變-2026090800-168h",
+     "file": "demo_synthetic/rearing_plant_1_north/D2.csv",
+     "rows": 168,
+     "start": "2026-09-08 00:00:00",
+     "end": "2026-09-14 23:00:00",
+     "sha256": "aec0206f88ad596a8974071043a2b7b35b92338f9a3c00e766e0d8695ebd59b7",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 3,
+     "code": "D3",
+     "label": "感測器開始漂移",
+     "story": "有一個感測器開始緩慢偏離（每天只偏一點點）。第一週通常還看不出來。",
+     "batch_id": "SYNTH-育成北側-D3-感測器開始漂移-2026091500-168h",
+     "file": "demo_synthetic/rearing_plant_1_north/D3.csv",
+     "rows": 168,
+     "start": "2026-09-15 00:00:00",
+     "end": "2026-09-21 23:00:00",
+     "sha256": "7df316ce65958ba73bf6a2a534595bdfaf5e6ed97f0add62d8af85b9dc6b3a2d",
+     "pre_imported": false,
+     "truth_events": 2
+    },
+    {
+     "step": 4,
+     "code": "D4",
+     "label": "漂移持續",
+     "story": "漂移持續。累積的偏離夠大時，系統才有機會發現；一旦發現，模型建議會改成『先處理資料』，不鼓勵重新訓練。",
+     "batch_id": "SYNTH-育成北側-D4-漂移持續-2026092200-168h",
+     "file": "demo_synthetic/rearing_plant_1_north/D4.csv",
+     "rows": 168,
+     "start": "2026-09-22 00:00:00",
+     "end": "2026-09-28 23:00:00",
+     "sha256": "9e2bde4b0583583edd57b4722c9a80d41e27ec6080489df387ea465df6bd9e3d",
+     "pre_imported": false,
+     "truth_events": 1
+    },
+    {
+     "step": 5,
+     "code": "D5",
+     "label": "讀值卡住與斷線",
+     "story": "另一個感測器的讀值卡住不動，並且有一段時間整列沒有資料（斷線）。這是資料品質問題。",
+     "batch_id": "SYNTH-育成北側-D5-讀值卡住與斷線-2026092900-168h",
+     "file": "demo_synthetic/rearing_plant_1_north/D5.csv",
+     "rows": 160,
+     "start": "2026-09-29 00:00:00",
+     "end": "2026-10-05 23:00:00",
+     "sha256": "32c99fbd3039439ca4c8629612b7c21506f62962b073227d5581d6353e995d17",
+     "pre_imported": false,
+     "truth_events": 4
+    }
+   ]
+  }
+ ]
+}

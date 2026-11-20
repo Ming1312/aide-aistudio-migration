@@ -1,0 +1,5 @@
+{
+  "name": "AIDE 智慧環境監測與決策平台",
+  "description": "七場域感測資料探索、預測與多模型比較、異常分析、資料更新與模型維護流程，並以 Gemini 做有根據的白話解釋。展示資料全為合成資料。",
+  "requestFramePermissions": []
+}
