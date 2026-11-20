@@ -37,7 +37,7 @@
   "standard_license_claimed": false,
   "standard_license": null,
   "terms_document": null,
-  "summary": "使用者確認上述專題用途可以使用；沒有提供正式的 CC BY、CC0 或其他標準開放授權條款，因此不得宣稱具有這些授權。",
+  "summary": "使用者確認上述專題用途可以使用；沒有外部證明文件。",
   "evidence_status": "user_attestation_only",
   "external_evidence": null
  },
@@ -53,14 +53,14 @@
  "not_provided": [
   "競賽方或銘祥科技的書面授權／同意文件",
   "競賽規則中關於資料使用的條文",
-  "標準開放授權條款（CC BY、CC0 等）",
+  "正式的授權條款文件",
   "公開下載網址"
  ],
  "remaining_items": [
   {
    "item": "外部證明文件（競賽方或銘祥科技的書面同意，或競賽規則中關於資料使用的條文）",
    "blocking": false,
-   "effect": "沒有它，網站與文件只能寫『使用者聲明』；不得寫成『已取得授權證明』"
+   "effect": "沒有它，網站與文件只能寫『使用者聲明』；不得寫成已有外部證明"
   },
   {
    "item": "授權範圍邊界：聲明的依據是『本競賽專題』；若網站要在競賽之外長期公開、散布給第三方或商業使用，聲明是否涵蓋並不明確",
