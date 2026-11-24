@@ -1,0 +1,7 @@
+# CI 專用覆蓋檔：只改「對外綁定」，其他（映像、健康檢查、記憶體上限、掛載、Caddyfile）全部沿用正式的 docker-compose.yml。
+# 需要 Docker Compose >= 2.24（!override 標籤）。
+services:
+  caddy:
+    # 正式版是 80:80、443:443；CI 只綁在本機迴路 127.0.0.1:8088，不開放任何公開位址，也不申請憑證（AIDE_DOMAIN 設成 http://:80）。
+    ports: !override
+      - "127.0.0.1:8088:80"

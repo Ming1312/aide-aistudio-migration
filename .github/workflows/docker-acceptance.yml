@@ -1,0 +1,53 @@
+name: docker-acceptance
+
+# 隔離驗收：Docker 建置、compose／Caddy 設定驗證、容器啟動、Python 引擎＋Node App 整合。
+# 不使用任何 repo secret；金鑰是 run_acceptance.sh 臨時產生並遮蔽的亂數。
+# 不申請 TLS 憑證、不對公網開放（Caddy 只綁 runner 的 127.0.0.1）、不推送容器映像。
+on:
+  workflow_dispatch:
+  push:
+    branches: ["ci/docker-acceptance"]
+
+# GITHUB_TOKEN 只有讀取內容的權限（checkout 需要），其餘全部為 none
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      # 只使用 GitHub 官方 actions，並固定在 commit SHA（不跟隨浮動標籤）
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false   # 後續步驟拿不到 token
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "22"
+
+      - name: 版本資訊（只讀）
+        run: |
+          docker version --format 'docker {{.Server.Version}}'
+          docker compose version
+          node --version
+          python3 --version
+
+      - name: Docker／Caddy／整合驗收
+        run: bash ci/run_acceptance.sh
+        env:
+          WORK: ${{ runner.temp }}/aide-ci
+
+      # 日誌在腳本結尾已掃過金鑰值（含金鑰就會刪除並讓這個 job 失敗）才會留下
+      - name: 留存日誌（7 天）
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: aide-ci-logs
+          path: ${{ runner.temp }}/aide-ci/logs
+          retention-days: 7
+          if-no-files-found: ignore
