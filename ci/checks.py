@@ -121,8 +121,19 @@ def stage_engine(a):
         s, _, hd = c.call("GET", "/health")
         ck("C2 安全標頭：X-Content-Type-Options=nosniff、不洩漏 Server 標頭",
            hget(hd, "X-Content-Type-Options") == "nosniff" and hget(hd, "Server") is None, {k: v for k, v in hd.items() if k.lower() in ("server", "x-content-type-options", "strict-transport-security")})
-        s, txt, _ = c.call("POST", "/v1/forecast", {"x": "a" * (7 * 1024 * 1024)}, headers=K, timeout=120)
-        ck("C3 請求本文超過 6MB 被 Caddy 擋下（413）", s == 413, s)
+        # Caddy 看到 Content-Length 超限會立刻回 413 並關閉連線；Python 的 urllib 還在送資料時會得到 BrokenPipe（CI 第一輪就是這樣失敗，
+        # 不是 Caddy 的問題）。改用 curl，它會在上傳途中讀取提早回來的回應。
+        import subprocess
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            body, hdr = os.path.join(td, "big.json"), os.path.join(td, "h.txt")
+            with open(body, "w") as f:
+                f.write('{"x":"' + "a" * (7 * 1024 * 1024) + '"}')
+            with open(hdr, "w") as f:  # 金鑰只放在暫存檔，不出現在命令列
+                f.write(f"X-API-Key: {api}\nContent-Type: application/json\n")
+            r = subprocess.run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "-X", "POST", "-H", f"@{hdr}", "--data-binary", f"@{body}",
+                                "--max-time", "60", a.base.rstrip("/") + "/v1/forecast"], capture_output=True, text=True)
+        ck("C3 請求本文超過 6MB 被 Caddy 擋下（413）", r.stdout.strip() == "413", (r.stdout.strip(), r.returncode))
     leaked = [i for i, b in enumerate(BODIES) if api in b or adm in b]
     ck("E9 所有回應本文都不含金鑰", not leaked, leaked[:3])
 
