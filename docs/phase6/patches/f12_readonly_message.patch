@@ -1,0 +1,38 @@
+F12 最小修正提案（尚未套用到 AI Studio；只動 server/routes.ts 的 proxyLivePost 一處）
+=========================================================================================
+問題：唯讀部署（引擎沒有 AIDE_ADMIN_KEY）對所有寫入端點回 403，body 是
+      {"detail":"管理金鑰未設定（AIDE_ADMIN_KEY）：寫入功能停用"}。
+      Node 把任何 401/403 都當成「憑證有誤」，管理者按寫入會看到 502「引擎憑證設定有誤」。
+      真正原因是「這個部署唯讀」，訊息誤導管理者去檢查不存在的憑證問題。
+修法：在 isEngineAuthFailure 分支之前，認得引擎「寫入停用」的 403 並回明確訊息。
+      不洩漏任何金鑰／位址；其餘 401/403 行為不變。
+
+--- a/server/routes.ts
++++ b/server/routes.ts
+@@ proxyLivePost()
+       if (result.parseError) {
+         res.status(502).json({ detail: "引擎回應格式不符" });
+         return;
+       }
++      // F12：引擎沒有設定管理金鑰＝這個部署唯讀。不是憑證問題，直接說清楚。
++      if (
++        result.status === 403 &&
++        result.data &&
++        typeof result.data === "object" &&
++        typeof (result.data as { detail?: unknown }).detail === "string" &&
++        (result.data as { detail: string }).detail.includes("寫入功能停用")
++      ) {
++        res.status(403).json({ detail: "此部署為唯讀展示：引擎已停用寫入（匯入／提交／回復／重算／模擬推進）" });
++        return;
++      }
+       if (isEngineAuthFailure(result.status)) {
+         warnEngineCredential(enginePath, result.status);
+         res.status(502).json({ detail: ENGINE_CREDENTIAL_DETAIL });
+         return;
+       }
+
+驗證方式（套用後）：
+  1. 管理者登入（密碼只由使用者輸入）→ 在即時預測頁觸發任一寫入 → 應看到上面這句 403 訊息，不是 502。
+  2. 把 ENGINE_API_KEY 故意設錯 → 仍應是 502「引擎憑證設定有誤」（401 不受影響）。
+  3. 既有測試：引擎回 403 但 detail 不含「寫入功能停用」時仍回 502（防止過度吸收）。
+備註：目前檢視者（viewer）在 UI 看不到任何寫入按鈕，所以只有管理者會碰到 F12，嚴重度低。

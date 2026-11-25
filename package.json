@@ -1,0 +1,30 @@
+{
+  "name": "aide-environmental-platform",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build",
+    "start": "node server.ts",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test reference/adminAuth.test.ts reference/geminiExplain.test.ts reference/decisionExplain.test.ts server/routes.test.ts server/gemini.test.ts server/overviewStatus.test.ts src/lib/liveForecast.test.ts src/lib/frontendFixes.test.ts src/lib/stepFactsNoGuard.test.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^3.6.1",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/express": "^5.0.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "express": "^5.3.0",
+    "lucide-react": "^1.77.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "recharts": "^3.11.0",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

@@ -1,0 +1,20 @@
+# 自動向 Let's Encrypt 取得並更新憑證（需要 AIDE_DOMAIN 指向這台虛擬機的公開 IP，且 80／443 對外開放）
+{$AIDE_DOMAIN} {
+	encode gzip
+	# 只轉送引擎的路徑；其他一律 404（不暴露 /docs 或任何多餘路徑）
+	@api path /health /v1/*
+	handle @api {
+		reverse_proxy engine:8080
+	}
+	handle {
+		respond "Not Found" 404
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	request_body {
+		max_size 6MB
+	}
+}

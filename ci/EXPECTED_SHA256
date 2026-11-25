@@ -1,0 +1,5 @@
+# <sha256>  <相對於 repo 根目錄的路徑>   —— 不符就停止，不使用舊版冒充
+# Python 引擎部署封包（aistudio-1.0.0，來源平台 1.1.0-rc3；2026-11-23 16:35 重新打包）
+f088f8ed6795336b523ea62448b79a2d67ee6b709b129bfeee02ee9acc938149  ci/inputs/aide-engine-aistudio-1.0.0-20261123.tar.gz
+# Node／React App（AI Studio Build Mode 匯出，含 F10／F11 修正；package.json 1.1.0）
+dc2238440a916cd601f287d096b82d40937f5bea98a0f3f1838d6581a7ef0cbd  ci/inputs/aide-app-buildmode-export-20261124.zip

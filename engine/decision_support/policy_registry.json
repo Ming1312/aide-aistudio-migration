@@ -1,0 +1,89 @@
+{
+  "schema": "aide-decision-policy-registry-v1",
+  "about": "誰可以產生哪一層的決策輔助。這份登錄表是『唯一』允許開啟正式風險決策（formal_risk）層的地方；程式不得在別處自行決定。",
+  "tiers": {
+    "general": "一般建議：資料檢查、監測、模型適用性說明。不涉及風險判定。",
+    "needs_human_review": "需要人工確認的異常：偵測器輸出的『候選事件』。不是故障判定，必須有人到現場或查資料來源確認。",
+    "formal_risk": "正式風險決策：只來自『已登錄的正式決策引擎』（凍結模型＋書面政策）。目前只有羊舍；且政策門檻仍是候選值，必須如實標示。"
+  },
+  "confidence_ladder": {
+    "high": "直接量測或計數的資料事實（例如缺漏筆數、事件持續時數），或已登錄正式引擎的原樣輸出。",
+    "medium": "至少兩條獨立實作的分析路徑對同一現象一致（不同偵測器，或偵測器加資料品質掃描），或驗證期與留存期的比較方向一致。注意：同一現象的兩種計算互相佐證，不是獨立的現場證據，也不代表原因已知。",
+    "low": "單一偵測器、探索性模型訊號，或兩個評估期方向不一致。",
+    "not_assessable": "資料不足以評估。"
+  },
+  "caps": {
+    "needs_human_review": "候選事件的可信程度最高 medium（沒有現場真值，不能更高）。",
+    "forecast_positive_claim": "『模型比基準好』這類正面說法最高 low（探索性、未經獨立前瞻驗證）。",
+    "forecast_negative_claim": "『沒有證據顯示模型比基準好』在驗證期與留存期方向一致時為 medium，否則 low。"
+  },
+  "allowed_actions": {
+    "continue_monitoring": "持續監測",
+    "increase_monitoring": "加強監測（提高查看頻率）",
+    "check_data_pipeline": "檢查資料傳輸與來源（資料端，不是設備）",
+    "verify_sensor_source": "確認感測器與資料來源",
+    "manual_remeasure": "人工複測",
+    "request_human_confirmation": "請人員確認",
+    "notify_manager": "通知負責人",
+    "use_baseline_as_reference": "以簡單基準作為對照參考",
+    "accumulate_more_data": "累積更多連續資料後再評估"
+  },
+  "forbidden": {
+    "invent_thresholds": "不得產生沒有登錄的警戒門檻、合格範圍或『超過就算異常』的數字。偵測器自己的參考值（由該場域歷史資料推得）只能當證據引用，並標明不是警戒門檻。",
+    "fault_verdict": "不得下『設備／感測器故障、損壞、需要更換』的結論。只能說『候選、需要確認』。",
+    "actuation": "不得產生、暗示或建議任何自動控制指令（開關、調整設備）。"
+  },
+  "design_parameters": {
+    "_note": "以下是呈現用的設計選擇，不是物理門檻，也沒有用資料調過。",
+    "top_groups_per_kind": 3,
+    "top_sensors_missing": 5,
+    "top_sensors_runs": 5
+  },
+  "domains": {
+    "sheep_barn": {
+      "formal_engine": true,
+      "engine": "既有羊舍 HGB 正式模型＋CQR 區間＋風險政策（config/decision_policy.yaml，phase3.0.0）",
+      "validation": "研究驗證結果保持原樣（Phase 2.5／2.6／3）；嚴格歷史回放只用『當時已存在』的凍結模型",
+      "policy_status": "candidate_threshold_unconfirmed",
+      "policy_note": "門檻 84 是候選分析門檻，不是資料提供者或負責單位確認的標準；本系統不控制任何設備。",
+      "validated_policy": false
+    },
+    "expert_system_c22": {
+      "formal_engine": false,
+      "policy_status": "none",
+      "validated_policy": false
+    },
+    "sanyegong_creek": {
+      "formal_engine": false,
+      "policy_status": "none",
+      "validated_policy": false
+    },
+    "construction_site_cb13505": {
+      "formal_engine": false,
+      "policy_status": "none",
+      "validated_policy": false
+    },
+    "northeast_corner": {
+      "formal_engine": false,
+      "policy_status": "none",
+      "validated_policy": false
+    },
+    "rearing_plant_1": {
+      "formal_engine": false,
+      "policy_status": "none",
+      "validated_policy": false
+    },
+    "rearing_plant_1_north": {
+      "formal_engine": false,
+      "policy_status": "none",
+      "validated_policy": false
+    }
+  },
+  "promotion_to_formal_risk": [
+    "有已凍結、通過嚴格歷史回放的模型（不能用全資料模型）",
+    "有書面政策檔，且門檻狀態為『已確認』（由資料提供者或負責單位書面確認，不是研究用候選值）",
+    "有獨立的前瞻驗證或現場對照紀錄（留存測試期只是描述性診斷，不算）",
+    "由負責人在本登錄表登記，並通過 tools/p64_decision_check.py 的全部檢查"
+  ],
+  "confidence_meaning": "可信程度＝對『資料中確實出現所述現象或數字』的把握；不是對『設備或感測器是否故障』、『原因是什麼』或『未來是否會發生』的把握。"
+}

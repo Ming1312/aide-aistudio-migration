@@ -1,0 +1,10 @@
+# 本機展示覆蓋檔（與 Phase 6.7 CI 驗過的 ci/docker-compose.ci.yml 相同）：
+# 正式 compose 是 80:80、443:443；這裡只把 Caddy 綁在本機迴路 127.0.0.1:8088。
+# 引擎 8080 在正式 compose 只用 expose（容器網路內部），不發佈到主機；這裡也不新增任何 ports。
+# 需要 Docker Compose >= 2.24（!override 標籤）。
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:8088:80"
+    # 固定在 Phase 6.7 CI 實際驗收通過的映像 digest（與 lib.sh 的 CADDY_IMAGE 相同；compose_gate 會核對）
+    image: caddy:2@sha256:4851e54a46b206517c574821bb5cc67f170d2156041e9fbc4c9193b45e84a75b

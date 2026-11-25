@@ -1,0 +1,46 @@
+# AIDE 引擎＋HTTPS 反向代理（單一虛擬機、單一引擎執行個體）
+# 使用：在虛擬機上，於本資料夾放好 .env（由 env.template 複製並填值），然後 `docker compose up -d --build`
+services:
+  engine:
+    build:
+      context: ..
+    container_name: aide-engine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      AIDE_LIVE_ROOT: /app/data/live_store
+      AIDE_REQUIRE_KEY: "1"
+      AIDE_DOCS: "0"
+    volumes:
+      - /var/lib/aide/live_store:/app/data/live_store       # 持久化磁碟上的版本庫（主機目錄擁有者必須是 uid 10001，vm_setup.sh 會處理）
+      - /var/backups/aide:/backups                           # 備份輸出
+    expose:
+      - "8080"                                               # 只給同一個 compose 網路內的 caddy 用；不對外
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 40s
+    mem_limit: 2g
+
+  caddy:
+    image: caddy:2
+    container_name: aide-caddy
+    restart: unless-stopped
+    depends_on:
+      engine:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AIDE_DOMAIN: ${AIDE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

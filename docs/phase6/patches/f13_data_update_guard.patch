@@ -1,0 +1,153 @@
+diff -ruN orig/src/lib/facts.ts full/src/lib/facts.ts
+--- orig/src/lib/facts.ts	2026-11-25 01:09:36.197656621 +0800
++++ full/src/lib/facts.ts	2026-11-25 01:09:36.213656654 +0800
+@@ -147,7 +147,9 @@
+     },
+     {
+       id: "f3",
+-      text: `守門建議：${stepOut.guard.recommendation}（感測器健康度 ${stepOut.guard.sensor_health}、允許重訓：${stepOut.retrain_allowed ? "是" : "否"}）`,
++      text: stepOut.guard
++        ? `守門建議：${stepOut.guard.recommendation}（感測器健康度 ${stepOut.guard.sensor_health}、允許重訓：${stepOut.retrain_allowed ? "是" : "否"}）`
++        : "此場域資料不足，系統不建立預測模型，沒有守門建議與重訓資訊",
+     },
+     ...stepOut.cards.map((c, idx) => ({
+       id: `f${idx + 4}`,
+diff -ruN orig/src/lib/stepFactsNoGuard.test.ts full/src/lib/stepFactsNoGuard.test.ts
+--- orig/src/lib/stepFactsNoGuard.test.ts	1970-01-01 08:00:00.000000000 +0800
++++ full/src/lib/stepFactsNoGuard.test.ts	2026-11-25 01:10:29.696767866 +0800
+@@ -0,0 +1,22 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { buildSyntheticStepFacts } from "./facts.ts";
++import type { DemoStepOutput } from "../types/app";
++
++const base = {
++  step: 1, label: "D1", version: "v1", rows_appended: 10, cards: [],
++  n_data_quality: 1, n_signal: 2, n_environment_suppressed: 0,
++  alerts_true: 0, alerts_false: 0,
++} as unknown as DemoStepOutput;
++
++test("不建模場域（沒有 guard／forecast）也能產生白話解釋用的事實，不會丟例外", () => {
++  const facts = buildSyntheticStepFacts("育成一廠北側", base, "D1", "v1");
++  const f3 = facts.find((f) => f.id === "f3");
++  assert.ok(f3 && f3.text.includes("不建立預測模型"));
++});
++
++test("有 guard 的場域維持原本的守門建議文字", () => {
++  const withGuard = { ...base, guard: { recommendation: "fix_data_first", raw: "", sensor_health: "ok", seconds: 0 }, retrain_allowed: false } as DemoStepOutput;
++  const f3 = buildSyntheticStepFacts("羊舍", withGuard, "D1", "v1").find((f) => f.id === "f3");
++  assert.ok(f3 && f3.text.includes("守門建議：fix_data_first") && f3.text.includes("允許重訓：否"));
++});
+diff -ruN orig/src/pages/DataUpdatePage.tsx full/src/pages/DataUpdatePage.tsx
+--- orig/src/pages/DataUpdatePage.tsx	2026-11-25 01:09:36.197656621 +0800
++++ full/src/pages/DataUpdatePage.tsx	2026-11-25 01:09:36.213656654 +0800
+@@ -498,40 +498,55 @@
+             ))}
+           </div>
+ 
+-          {/* Model Guard Status */}
+-          <div
+-            className={`p-4 rounded-md border text-xs space-y-1.5 ${
+-              currentStepOutput.guard.recommendation === "fix_data_first"
+-                ? "bg-rose-50 border-rose-300 text-rose-950"
+-                : "bg-slate-50 border-slate-200 text-slate-800"
+-            }`}
+-          >
+-            <div className="font-semibold text-sm flex items-center gap-2">
+-              {currentStepOutput.guard.recommendation === "fix_data_first" ? (
+-                <>
+-                  <AlertTriangle className="h-4 w-4 text-rose-700" />
+-                  守門建議：fix_data_first（先處理資料，不建議重訓）
+-                </>
+-              ) : (
+-                <>
+-                  <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+-                  守門建議：{currentStepOutput.guard.recommendation}
+-                </>
+-              )}
++          {/* Model Guard Status（不建模的場域沒有 guard／forecast，改顯示說明，不能讓整頁當掉） */}
++          {currentStepOutput.guard ? (
++            <div
++              className={`p-4 rounded-md border text-xs space-y-1.5 ${
++                currentStepOutput.guard.recommendation === "fix_data_first"
++                  ? "bg-rose-50 border-rose-300 text-rose-950"
++                  : "bg-slate-50 border-slate-200 text-slate-800"
++              }`}
++            >
++              <div className="font-semibold text-sm flex items-center gap-2">
++                {currentStepOutput.guard.recommendation === "fix_data_first" ? (
++                  <>
++                    <AlertTriangle className="h-4 w-4 text-rose-700" />
++                    守門建議：fix_data_first（先處理資料，不建議重訓）
++                  </>
++                ) : (
++                  <>
++                    <CheckCircle2 className="h-4 w-4 text-emerald-700" />
++                    守門建議：{currentStepOutput.guard.recommendation}
++                  </>
++                )}
++              </div>
++              <div>
++                感測器健康度：{currentStepOutput.guard.sensor_health} ｜ 允許重新訓練：
++                {currentStepOutput.retrain_allowed ? "是（仍需人工按下）" : "否（被守門擋下）"} ｜
++                預測任務（{currentStepOutput.forecast?.task ?? "無"}）適用性：
++                {currentStepOutput.forecast?.applicability ?? "不適用"}
++              </div>
++              <div className="font-mono-tabular text-slate-600">
++                品質問題數：{currentStepOutput.n_data_quality} ｜ 異常訊號數：
++                {currentStepOutput.n_signal} ｜ 環境變化抑制：
++                {currentStepOutput.n_environment_suppressed} ｜ 對照真值命中：
++                {currentStepOutput.alerts_true}、誤報：{currentStepOutput.alerts_false}
++              </div>
+             </div>
+-            <div>
+-              感測器健康度：{currentStepOutput.guard.sensor_health} ｜ 允許重新訓練：
+-              {currentStepOutput.retrain_allowed ? "是（仍需人工按下）" : "否（被守門擋下）"} ｜
+-              預測任務（{currentStepOutput.forecast.task}）適用性：
+-              {currentStepOutput.forecast.applicability}
++          ) : (
++            <div className="p-4 rounded-md border border-slate-200 bg-slate-50 text-xs text-slate-800 space-y-1.5">
++              <div className="font-semibold text-sm">此場域不建立預測模型，沒有守門建議</div>
++              <div>
++                資料不足，依平台政策不建模、不重新訓練、不顯示預測。以下僅是資料品質與異常訊號的計數。
++              </div>
++              <div className="font-mono-tabular text-slate-600">
++                品質問題數：{currentStepOutput.n_data_quality} ｜ 異常訊號數：
++                {currentStepOutput.n_signal} ｜ 環境變化抑制：
++                {currentStepOutput.n_environment_suppressed} ｜ 對照真值命中：
++                {currentStepOutput.alerts_true}、誤報：{currentStepOutput.alerts_false}
++              </div>
+             </div>
+-            <div className="font-mono-tabular text-slate-600">
+-              品質問題數：{currentStepOutput.n_data_quality} ｜ 異常訊號數：
+-              {currentStepOutput.n_signal} ｜ 環境變化抑制：
+-              {currentStepOutput.n_environment_suppressed} ｜ 對照真值命中：
+-              {currentStepOutput.alerts_true}、誤報：{currentStepOutput.alerts_false}
+-            </div>
+-          </div>
++          )}
+         </section>
+       )}
+ 
+diff -ruN orig/src/types/app.ts full/src/types/app.ts
+--- orig/src/types/app.ts	2026-11-25 01:09:36.198656623 +0800
++++ full/src/types/app.ts	2026-11-25 01:09:36.212656652 +0800
+@@ -143,14 +143,15 @@
+     has_evidence: boolean;
+     lead_sensor: string | null;
+   }>;
+-  guard: {
++  // 不建模的場域（例如 rearing_plant_1_north）沒有守門、重訓與預測資訊，三者皆可能缺席。
++  guard?: {
+     recommendation: string;
+     raw: string;
+     sensor_health: string;
+     seconds: number;
+   };
+-  retrain_allowed: boolean;
+-  forecast: {
++  retrain_allowed?: boolean;
++  forecast?: {
+     task: string;
+     n_methods: number;
+     applicability: string;

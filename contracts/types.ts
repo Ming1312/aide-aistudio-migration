@@ -171,3 +171,174 @@ export interface DecisionExplainResponse {
   dataset_id: string; overview: string; overview_source: "gemini" | "rule_based"; items: DecisionExplainItem[]; cannot_conclude: string[]; disclaimers: string[];
   guard: { ok: boolean; fallback_items: string[]; dropped_unknown_items: string[]; issues: string[] };
 }
+
+// ---- 即時預測資料流（Node /api/live/* ⇄ Python /v1/live/*）----
+export interface LiveFlag {
+  code?: string;
+  level?: string;
+  text: string;
+}
+
+export interface LiveDomainSummary {
+  dataset_id: string;
+  display_name?: string;
+  n_tasks?: number;
+  mode?: string;
+  current_version?: string | null;
+  latest_source?: string | null;
+  is_stale?: boolean;
+  data_end?: string | null;
+}
+
+export interface LiveDomainsResponse {
+  domains: LiveDomainSummary[];
+}
+
+export interface LiveStatusResponse {
+  dataset_id: string;
+  data_end: string | null;
+  mode: "sim" | "real" | string;
+  is_stale: boolean;
+  stale_after_h?: number | null;
+  hours_since_last?: number | null;
+  current_version: string | null;
+  latest_source: DataKind | "unverified_import" | string | null;
+  contains_synthetic?: boolean;
+  forecast_matches_version?: boolean | null;
+  forecast_data_version?: string | null;
+  issued_at?: string | null;
+  n_tasks?: number;
+  flags: Array<LiveFlag | string>;
+  health?: { ok?: boolean; status?: string; detail?: string; [k: string]: unknown } | string | null;
+}
+
+export interface LiveForecastMethodValue {
+  label?: string;
+  kind?: "ml" | "baseline" | string;
+  value: number | null;
+  refused: string | null;
+  version?: string;
+  variant?: string;
+}
+
+export interface LiveApplicabilityInfo {
+  status: string;
+  reasons?: string[];
+  reason?: string | null;
+  detail?: string | null;
+}
+
+export interface LiveForecastTask {
+  task_id: string;
+  sensor: string;
+  horizon_h: number;
+  unit?: string;
+  unit_status?: string;
+  origin?: string;
+  target_timestamp: string;
+  contains_synthetic?: boolean;
+  issued_at?: string | null;
+  data_version?: string | null;
+  history?: Array<{ time: string; value: number | null }>;
+  applicability?: LiveApplicabilityInfo;
+  models: Partial<Record<ModelKey, LiveForecastMethodValue>> & Record<string, LiveForecastMethodValue | undefined>;
+}
+
+export interface LiveForecastResponse {
+  dataset_id: string;
+  data_version: string | null;
+  issued_at: string | null;
+  contains_synthetic: boolean;
+  data_kind?: DataKind | string;
+  n_tasks?: number;
+  guard?: { alerts_ok: boolean; reason?: string | null };
+  history?: Record<string, Array<{ time: string; value: number | null }>>;
+  tasks: LiveForecastTask[];
+  limits?: string[];
+  no_claim?: string;
+}
+
+export interface LiveMonitorMethodMetric {
+  mae: number | null;
+  delta_vs_persistence?: number | null;
+  persistence_gap?: number | null;
+  n?: number;
+  refused?: string | null;
+}
+
+export interface LiveMonitorTask {
+  task_id: string;
+  sensor: string;
+  horizon_h: number;
+  unit?: string;
+  n_matured?: number;
+  methods: Record<string, LiveMonitorMethodMetric>;
+}
+
+export interface LiveMonitorResponse {
+  dataset_id: string;
+  note?: string;
+  n_matured: number;
+  tasks: LiveMonitorTask[];
+}
+
+export interface LiveVersionEntry {
+  seq?: number;
+  version_id: string;
+  created_at: string;
+  rows_added: number;
+  source: string;
+  approved_by?: string | null;
+  time_range?: [string, string] | string[] | null;
+  synthetic_marked?: boolean;
+  is_current?: boolean;
+  reason?: string | null;
+  contains_synthetic?: boolean;
+}
+
+export type LiveVersionsResponse = LiveVersionEntry[];
+
+export interface LivePendingItem {
+  upload_id: string;
+  status?: string;
+  n_block?: number;
+  n_warn?: number;
+  filename?: string;
+  staged_at?: string;
+  blocks?: string[];
+  created_at?: string;
+  rows?: number;
+  source?: string;
+  license_note?: string;
+  reasons?: string[];
+}
+
+export type LivePendingResponse = LivePendingItem[];
+
+export interface LiveEventItem {
+  seq?: number;
+  t: string;
+  kind: string;
+  upload_id?: string | null;
+  version_id?: string | null;
+  detail?: string | null;
+  actor?: string | null;
+  source?: string | null;
+  [k: string]: unknown;
+}
+
+export type LiveEventsResponse = LiveEventItem[];
+
+export interface LiveWriteResult {
+  ok?: boolean;
+  decision?: string;
+  reasons?: string[];
+  block_reasons?: string[];
+  upload_id?: string;
+  version_id?: string;
+  data_version?: string;
+  rows_added?: number;
+  detail?: string;
+  message?: string;
+}
+

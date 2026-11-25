@@ -1,0 +1,342 @@
+# Phase 5.1 — 其他場域／任務的模型卡片（尚未訓練）。羊舍已訓練模型的卡片不在這裡：它們由 models/phase3/model_registry.json 讀出。
+# `models:` 區只能登記 Candidate / Insufficient Data / Unavailable；任何 artifact 都不可寫在這裡（ModelCard 驗證會拒絕）。
+# Phase 5.2 的偵測器卡片在檔尾的 `detector_models:`（狀態只能是 Experimental／Candidate，必須帶 artifact 與 sha256）。
+# 狀態與 outputs/phase5_1/ai_task_matrix.csv 必須一致（tests/test_phase51_registry.py 會檢查）。
+catalog_version: 1
+models:
+  - model_id: sheep_barn.anomaly_statistical
+    model_version: none
+    domain_id: livestock_barn
+    site_id: sheep_barn
+    task_type: anomaly_statistical
+    target_variable: "成羊區平均溫度"
+    model_status: Candidate
+    input_schema_version: sheep_barn-wide-hourly-v1
+    expected_freq_hours: 1.0
+    required_features: ["成羊區平均溫度", "成羊區平均濕度", "ID4-溫度", "ID4-濕度"]
+    required_units: {"成羊區平均溫度": "°C", "成羊區平均濕度": "%", "ID4-溫度": "°C", "ID4-濕度": "%"}
+    min_history_hours: 336
+    notes: "統計異常偵測（無標籤）。Feasible (unsupervised, no labels)。尚未訓練；Phase 5.2 之前沒有任何輸出。"
+  - model_id: sheep_barn.predictive_maintenance
+    model_version: none
+    domain_id: livestock_barn
+    site_id: sheep_barn
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+  - model_id: expert_system_c22.predictive_maintenance
+    model_version: none
+    domain_id: aquaculture_pond
+    site_id: expert_system_c22
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+  - model_id: sanyegong_creek.anomaly_statistical
+    model_version: none
+    domain_id: river_water_station
+    site_id: sanyegong_creek
+    task_type: anomaly_statistical
+    target_variable: "DO"
+    model_status: Candidate
+    input_schema_version: sanyegong_creek-wide-hourly-v1
+    expected_freq_hours: 1.0
+    required_features: ["DO", "水溫", "pH", "EC"]
+    required_units: {"DO": "mg/L", "水溫": "°C", "pH": "pH", "EC": "µS/cm"}
+    min_history_hours: 336
+    notes: "統計異常偵測（無標籤）。Phase 5.2 的第二場域（驗證方法是否可移植）。尚未訓練；Phase 5.2 之前沒有任何輸出。"
+  - model_id: sanyegong_creek.predictive_maintenance
+    model_version: none
+    domain_id: river_water_station
+    site_id: sanyegong_creek
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+  - model_id: construction_site_cb13505.anomaly_statistical
+    model_version: none
+    domain_id: construction_microclimate
+    site_id: construction_site_cb13505
+    task_type: anomaly_statistical
+    target_variable: "溫度"
+    model_status: Candidate
+    input_schema_version: construction_site_cb13505-wide-hourly-v1
+    expected_freq_hours: 1.0
+    required_features: ["溫度", "濕度", "PM2.5", "PM10"]
+    required_units: {"溫度": "°C", "濕度": "%", "PM2.5": "µg/m³", "PM10": "µg/m³"}
+    min_history_hours: 336
+    notes: "統計異常偵測（無標籤）。延後到 Phase 5.2 之後。尚未訓練；Phase 5.2 之前沒有任何輸出。"
+  - model_id: construction_site_cb13505.predictive_maintenance
+    model_version: none
+    domain_id: construction_microclimate
+    site_id: construction_site_cb13505
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+  - model_id: northeast_corner.anomaly_statistical
+    model_version: none
+    domain_id: air_quality_microclimate
+    site_id: northeast_corner
+    task_type: anomaly_statistical
+    target_variable: "TEMP"
+    model_status: Candidate
+    input_schema_version: northeast_corner-wide-hourly-v1
+    expected_freq_hours: 1.0
+    required_features: ["TEMP", "RH", "PM2.5", "PM10"]
+    required_units: {"TEMP": "°C", "RH": "%", "PM2.5": "µg/m³", "PM10": "µg/m³"}
+    min_history_hours: 336
+    notes: "統計異常偵測（無標籤）。延後到 Phase 5.2 之後。尚未訓練；Phase 5.2 之前沒有任何輸出。"
+  - model_id: northeast_corner.predictive_maintenance
+    model_version: none
+    domain_id: air_quality_microclimate
+    site_id: northeast_corner
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+  - model_id: rearing_plant_1.anomaly_statistical
+    model_version: none
+    domain_id: air_quality_microclimate
+    site_id: rearing_plant_1
+    task_type: anomaly_statistical
+    target_variable: "TEMP"
+    model_status: Candidate
+    input_schema_version: rearing_plant_1-wide-hourly-v1
+    expected_freq_hours: 1.0
+    required_features: ["TEMP", "RH", "PM2.5", "PM10"]
+    required_units: {"TEMP": "°C", "RH": "%", "PM2.5": "µg/m³", "PM10": "µg/m³"}
+    min_history_hours: 336
+    notes: "統計異常偵測（無標籤）。延後到 Phase 5.2 之後。尚未訓練；Phase 5.2 之前沒有任何輸出。"
+  - model_id: rearing_plant_1.predictive_maintenance
+    model_version: none
+    domain_id: air_quality_microclimate
+    site_id: rearing_plant_1
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+  - model_id: rearing_plant_1_north.anomaly_statistical
+    model_version: none
+    domain_id: air_quality_microclimate
+    site_id: rearing_plant_1_north
+    task_type: anomaly_statistical
+    target_variable: "溫度"
+    model_status: Insufficient Data
+    input_schema_version: rearing_plant_1_north-wide-hourly-v1
+    expected_freq_hours: 1.0
+    required_features: ["溫度", "濕度", "PM2.5", "PM10"]
+    required_units: {"溫度": "°C", "濕度": "%", "PM2.5": "µg/m³", "PM10": "µg/m³"}
+    min_history_hours: 336
+    notes: "統計異常偵測（無標籤）。連續有效窗僅 11.25 天（<14 天門檻）、時間戳記覆蓋率 17.6%。尚未訓練；Phase 5.2 之前沒有任何輸出。"
+  - model_id: rearing_plant_1_north.predictive_maintenance
+    model_version: none
+    domain_id: air_quality_microclimate
+    site_id: rearing_plant_1_north
+    task_type: predictive_maintenance
+    target_variable: "equipment_failure"
+    model_status: Unavailable
+    input_schema_version: none
+    notes: "Predictive Maintenance Readiness: Insufficient Evidence。沒有設備故障紀錄、維修時間或停機事件標籤。"
+# ===== BEGIN phase52 detector_models (generated by src/p52_serving.py register; do not edit by hand) =====
+detector_models:
+- model_id: expert_system_c22.do1.rule_based
+  model_version: p52.0.1
+  domain_id: aquaculture_pond
+  site_id: expert_system_c22
+  task_type: anomaly_statistical
+  target_variable: DO1 即時值
+  model_status: Experimental
+  input_schema_version: expert_system_c22-wide-hourly-v1
+  expected_freq_hours: 1.0
+  required_features:
+  - DO1 即時值
+  required_units:
+    DO1 即時值: mg/L
+  min_history_hours: 48
+  detector_id: rule_based
+  detector_version: p52.0.1
+  threshold_version: p52-thr-v1
+  promotion_stage: Experimental — pre-registered promotion gates NOT met (see outputs/phase5_2/retention_decision.csv); not a Validated Prototype
+  artifact_files:
+  - path: models/phase52/expert_system_c22.do1.rule_based.json
+    sha256: d3ab7d4a50516b09fa33293a081ff54bdbd31a03bb83ff191284f52d9fdbaab1
+  training_data_fingerprint: 091bf812bc1f5cf4
+  training_cutoff: '2026-08-24 11:00:00'
+  valid_from: '2026-08-24 12:00:00'
+  usage_scope: any
+  training_data_basis: 專家系統 單一通道 DO1 即時值，2026-07-01 16:00:00 ~ 2026-08-24 11:00:00（train＋validation，時間順序）
+  evaluation_protocol: train→validation→holdout 時間順序；holdout 只評估一次（holdout_ledger.json）；無真實標籤
+  evaluation_metrics:
+    holdout_alert_hour_share: 0.0023529411764705
+    holdout_events_per_day: 0.028235294117647
+    synthetic_mean_detection_spike_step_drift: 0.633249791144528
+  notes: 統計異常／資料品質候選偵測（無標籤）。沒有設備故障標籤：所有輸出是統計異常或資料品質候選，不是故障診斷；合成異常偵測率不是真實故障辨識能力。；訓練＋驗證資料只有約 7.5 週（2026-07-01 至 08-24），holdout 約 5 週；DO 單位、探頭與池位對應、CPM 對應設備皆未經 JNC 確認。
+- model_id: expert_system_c22.do1.robust_z
+  model_version: p52.0.1
+  domain_id: aquaculture_pond
+  site_id: expert_system_c22
+  task_type: anomaly_statistical
+  target_variable: DO1 即時值
+  model_status: Experimental
+  input_schema_version: expert_system_c22-wide-hourly-v1
+  expected_freq_hours: 1.0
+  required_features:
+  - DO1 即時值
+  required_units:
+    DO1 即時值: mg/L
+  min_history_hours: 48
+  detector_id: robust_z
+  detector_version: p52.0.1
+  threshold_version: p52-thr-v1
+  promotion_stage: Experimental — pre-registered promotion gates NOT met (see outputs/phase5_2/retention_decision.csv); not a Validated Prototype
+  artifact_files:
+  - path: models/phase52/expert_system_c22.do1.robust_z.json
+    sha256: cb8a5d507c74e84c92bc6b170676b6f225d7dca7a4dee53fc6f1d48d60cb8bf6
+  training_data_fingerprint: 091bf812bc1f5cf4
+  training_cutoff: '2026-08-24 11:00:00'
+  valid_from: '2026-08-24 12:00:00'
+  usage_scope: any
+  training_data_basis: 專家系統 單一通道 DO1 即時值，2026-07-01 16:00:00 ~ 2026-08-24 11:00:00（train＋validation，時間順序）
+  evaluation_protocol: train→validation→holdout 時間順序；holdout 只評估一次（holdout_ledger.json）；無真實標籤
+  evaluation_metrics:
+    holdout_alert_hour_share: 0.0070588235294117
+    holdout_events_per_day: 0.028235294117647
+    synthetic_mean_detection_spike_step_drift: 0.4160401002506266
+  notes: 統計異常／資料品質候選偵測（無標籤）。沒有設備故障標籤：所有輸出是統計異常或資料品質候選，不是故障診斷；合成異常偵測率不是真實故障辨識能力。；訓練＋驗證資料只有約 7.5 週（2026-07-01 至 08-24），holdout 約 5 週；DO 單位、探頭與池位對應、CPM 對應設備皆未經 JNC 確認。
+- model_id: expert_system_c22.do2.rule_based
+  model_version: p52.0.1
+  domain_id: aquaculture_pond
+  site_id: expert_system_c22
+  task_type: anomaly_statistical
+  target_variable: DO2 即時值
+  model_status: Experimental
+  input_schema_version: expert_system_c22-wide-hourly-v1
+  expected_freq_hours: 1.0
+  required_features:
+  - DO2 即時值
+  required_units:
+    DO2 即時值: mg/L
+  min_history_hours: 48
+  detector_id: rule_based
+  detector_version: p52.0.1
+  threshold_version: p52-thr-v1
+  promotion_stage: Experimental — pre-registered promotion gates NOT met (see outputs/phase5_2/retention_decision.csv); not a Validated Prototype
+  artifact_files:
+  - path: models/phase52/expert_system_c22.do2.rule_based.json
+    sha256: 37f99440d599c31c3912aa8e7066b9668abe527d9a649a1ed06ff366e332db56
+  training_data_fingerprint: 9706cb32df474dfe
+  training_cutoff: '2026-08-24 11:00:00'
+  valid_from: '2026-08-24 12:00:00'
+  usage_scope: any
+  training_data_basis: 專家系統 單一通道 DO2 即時值，2026-07-01 16:00:00 ~ 2026-08-24 11:00:00（train＋validation，時間順序）
+  evaluation_protocol: train→validation→holdout 時間順序；holdout 只評估一次（holdout_ledger.json）；無真實標籤
+  evaluation_metrics:
+    holdout_alert_hour_share: 0.0247058823529411
+    holdout_events_per_day: 0.0564705882352941
+    synthetic_mean_detection_spike_step_drift: 0.5642857142857143
+  notes: 統計異常／資料品質候選偵測（無標籤）。沒有設備故障標籤：所有輸出是統計異常或資料品質候選，不是故障診斷；合成異常偵測率不是真實故障辨識能力。；訓練＋驗證資料只有約 7.5 週（2026-07-01 至 08-24），holdout 約 5 週；DO 單位、探頭與池位對應、CPM 對應設備皆未經 JNC 確認。
+- model_id: expert_system_c22.do2.robust_z
+  model_version: p52.0.1
+  domain_id: aquaculture_pond
+  site_id: expert_system_c22
+  task_type: anomaly_statistical
+  target_variable: DO2 即時值
+  model_status: Experimental
+  input_schema_version: expert_system_c22-wide-hourly-v1
+  expected_freq_hours: 1.0
+  required_features:
+  - DO2 即時值
+  required_units:
+    DO2 即時值: mg/L
+  min_history_hours: 48
+  detector_id: robust_z
+  detector_version: p52.0.1
+  threshold_version: p52-thr-v1
+  promotion_stage: Experimental — pre-registered promotion gates NOT met (see outputs/phase5_2/retention_decision.csv); not a Validated Prototype
+  artifact_files:
+  - path: models/phase52/expert_system_c22.do2.robust_z.json
+    sha256: 6b8a7886e8235afff11a459b0d06056120302bf4b1019603ec44c91486ccedd8
+  training_data_fingerprint: 9706cb32df474dfe
+  training_cutoff: '2026-08-24 11:00:00'
+  valid_from: '2026-08-24 12:00:00'
+  usage_scope: any
+  training_data_basis: 專家系統 單一通道 DO2 即時值，2026-07-01 16:00:00 ~ 2026-08-24 11:00:00（train＋validation，時間順序）
+  evaluation_protocol: train→validation→holdout 時間順序；holdout 只評估一次（holdout_ledger.json）；無真實標籤
+  evaluation_metrics:
+    holdout_alert_hour_share: 0.0
+    holdout_events_per_day: 0.0
+    synthetic_mean_detection_spike_step_drift: 0.43571428571428567
+  notes: 統計異常／資料品質候選偵測（無標籤）。沒有設備故障標籤：所有輸出是統計異常或資料品質候選，不是故障診斷；合成異常偵測率不是真實故障辨識能力。；訓練＋驗證資料只有約 7.5 週（2026-07-01 至 08-24），holdout 約 5 週；DO 單位、探頭與池位對應、CPM 對應設備皆未經 JNC 確認。
+- model_id: expert_system_c22.do3.rule_based
+  model_version: p52.0.1
+  domain_id: aquaculture_pond
+  site_id: expert_system_c22
+  task_type: anomaly_statistical
+  target_variable: DO3 即時值
+  model_status: Experimental
+  input_schema_version: expert_system_c22-wide-hourly-v1
+  expected_freq_hours: 1.0
+  required_features:
+  - DO3 即時值
+  required_units:
+    DO3 即時值: mg/L
+  min_history_hours: 48
+  detector_id: rule_based
+  detector_version: p52.0.1
+  threshold_version: p52-thr-v1
+  promotion_stage: Experimental — pre-registered promotion gates NOT met (see outputs/phase5_2/retention_decision.csv); not a Validated Prototype
+  artifact_files:
+  - path: models/phase52/expert_system_c22.do3.rule_based.json
+    sha256: df4d9eb0001e1f1c523683789645835e533b46ed3cd6e6c9a2dd298d25358c30
+  training_data_fingerprint: ebf6717138f6bbed
+  training_cutoff: '2026-08-24 11:00:00'
+  valid_from: '2026-08-24 12:00:00'
+  usage_scope: any
+  training_data_basis: 專家系統 單一通道 DO3 即時值，2026-07-01 16:00:00 ~ 2026-08-24 11:00:00（train＋validation，時間順序）
+  evaluation_protocol: train→validation→holdout 時間順序；holdout 只評估一次（holdout_ledger.json）；無真實標籤
+  evaluation_metrics:
+    holdout_alert_hour_share: 0.1858823529411764
+    holdout_events_per_day: 0.1411764705882353
+    synthetic_mean_detection_spike_step_drift: 0.5635504201680672
+  notes: 統計異常／資料品質候選偵測（無標籤）。沒有設備故障標籤：所有輸出是統計異常或資料品質候選，不是故障診斷；合成異常偵測率不是真實故障辨識能力。；訓練＋驗證資料只有約 7.5 週（2026-07-01 至 08-24），holdout 約 5 週；DO 單位、探頭與池位對應、CPM 對應設備皆未經 JNC 確認。
+- model_id: expert_system_c22.do3.robust_z
+  model_version: p52.0.1
+  domain_id: aquaculture_pond
+  site_id: expert_system_c22
+  task_type: anomaly_statistical
+  target_variable: DO3 即時值
+  model_status: Experimental
+  input_schema_version: expert_system_c22-wide-hourly-v1
+  expected_freq_hours: 1.0
+  required_features:
+  - DO3 即時值
+  required_units:
+    DO3 即時值: mg/L
+  min_history_hours: 48
+  detector_id: robust_z
+  detector_version: p52.0.1
+  threshold_version: p52-thr-v1
+  promotion_stage: Experimental — pre-registered promotion gates NOT met (see outputs/phase5_2/retention_decision.csv); not a Validated Prototype
+  artifact_files:
+  - path: models/phase52/expert_system_c22.do3.robust_z.json
+    sha256: eff4cee25900e5faeb9f872cae9cc6fe7f129192c3315b6375caeff9ecf6c4a0
+  training_data_fingerprint: ebf6717138f6bbed
+  training_cutoff: '2026-08-24 11:00:00'
+  valid_from: '2026-08-24 12:00:00'
+  usage_scope: any
+  training_data_basis: 專家系統 單一通道 DO3 即時值，2026-07-01 16:00:00 ~ 2026-08-24 11:00:00（train＋validation，時間順序）
+  evaluation_protocol: train→validation→holdout 時間順序；holdout 只評估一次（holdout_ledger.json）；無真實標籤
+  evaluation_metrics:
+    holdout_alert_hour_share: 0.0044117647058823
+    holdout_events_per_day: 0.028235294117647
+    synthetic_mean_detection_spike_step_drift: 0.3224789915966387
+  notes: 統計異常／資料品質候選偵測（無標籤）。沒有設備故障標籤：所有輸出是統計異常或資料品質候選，不是故障診斷；合成異常偵測率不是真實故障辨識能力。；訓練＋驗證資料只有約 7.5 週（2026-07-01 至 08-24），holdout 約 5 週；DO 單位、探頭與池位對應、CPM 對應設備皆未經 JNC 確認。
+# ===== END phase52 detector_models =====

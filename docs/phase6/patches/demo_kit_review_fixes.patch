@@ -1,0 +1,619 @@
+diff -ruN kit_orig/compose_gate.py kit_new/compose_gate.py
+--- kit_orig/compose_gate.py	1970-01-01 08:00:00.000000000 +0800
++++ kit_new/compose_gate.py	2026-11-24 21:32:20.942358287 +0800
+@@ -0,0 +1,70 @@
++#!/usr/bin/env python3
++"""啟動前守門：讀 `docker compose config --format json` 的輸出（stdin），驗證「真正會被啟動的設定」。
++只印出判定與有問題的項目名稱，【不印任何值】（compose 會把 env 檔的內容展開進輸出，包含 API 金鑰，所以只能經管線進來）。
++用法：compose ... config --format json | python3 compose_gate.py <caddy 映像（含 digest）>
++結束碼：0 通過；1 有問題。"""
++from __future__ import annotations
++
++import json
++import sys
++
++FORBIDDEN_ENV = {"AIDE_ADMIN_KEY", "AIDE_ALLOW_SIM", "ENGINE_ADMIN_KEY", "GEMINI_API_KEY", "GEMINI_MODEL",
++                 "GOOGLE_API_KEY", "AIDE_DATA_DIR", "AIDE_ALLOWED_ORIGINS"}
++EXPECTED_VOLUMES = {("/var/lib/aide/live_store", "/app/data/live_store"), ("/var/backups/aide", "/backups")}
++
++
++def check(cfg: dict, caddy_image: str) -> list[str]:
++    bad: list[str] = []
++    svcs = cfg.get("services") or {}
++    if set(svcs) != {"engine", "caddy"}:
++        bad.append(f"服務清單不是 engine+caddy：{sorted(svcs)}")
++    eng, cad = svcs.get("engine") or {}, svcs.get("caddy") or {}
++    if eng.get("ports"):
++        bad.append("engine 有 ports（引擎 8080 不可發佈到主機）")
++    cp = cad.get("ports") or []
++    if not (len(cp) == 1 and cp[0].get("host_ip") == "127.0.0.1" and str(cp[0].get("published")) == "8088"
++            and cp[0].get("target") == 80 and cp[0].get("protocol", "tcp") == "tcp"):
++        bad.append("caddy 的 ports 不是『只有 127.0.0.1:8088->80』")
++    env = eng.get("environment") or {}
++    if isinstance(env, list):  # 保險：有些版本輸出 KEY=VALUE 清單
++        env = dict(x.split("=", 1) if "=" in x else (x, None) for x in env)
++    hit = sorted(FORBIDDEN_ENV & set(env))
++    if hit:
++        bad.append(f"engine 環境含不允許的名稱：{hit}")
++    if env.get("AIDE_REQUIRE_KEY") != "1":
++        bad.append("engine 的 AIDE_REQUIRE_KEY 不是 1")
++    if env.get("AIDE_LIVE_ROOT") != "/app/data/live_store":
++        bad.append("engine 的 AIDE_LIVE_ROOT 不是 /app/data/live_store")
++    if not env.get("AIDE_API_KEY"):
++        bad.append("engine 沒有 AIDE_API_KEY")
++    vols = {(v.get("source"), v.get("target")) for v in (eng.get("volumes") or [])}
++    if vols != EXPECTED_VOLUMES:
++        bad.append("engine 的掛載不是預期的 live_store 與 backups 兩個 bind mount")
++    for name, s in svcs.items():
++        for k in ("privileged", "pid", "ipc", "cap_add", "devices", "security_opt", "extra_hosts"):
++            if s.get(k):
++                bad.append(f"{name} 使用了 {k}")
++        if s.get("network_mode"):
++            bad.append(f"{name} 使用了 network_mode={s.get('network_mode')}")
++    if (cad.get("environment") or {}).get("AIDE_DOMAIN") != "http://:80":
++        bad.append("caddy 的 AIDE_DOMAIN 不是 http://:80（不可申請憑證）")
++    if caddy_image and cad.get("image") != caddy_image:
++        bad.append("caddy 映像不是固定的 digest 版本")
++    return bad
++
++
++def main() -> int:
++    try:
++        cfg = json.load(sys.stdin)
++    except Exception:  # noqa: BLE001
++        print("無法解析 compose 設定（不是 JSON）")
++        return 1
++    bad = check(cfg, sys.argv[1] if len(sys.argv) > 1 else "")
++    for b in bad:
++        print("  ✗ " + b)
++    print("compose 解析結果：" + ("通過" if not bad else f"{len(bad)} 項不符"))
++    return 0 if not bad else 1
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff -ruN kit_orig/copy_key.py kit_new/copy_key.py
+--- kit_orig/copy_key.py	1970-01-01 08:00:00.000000000 +0800
++++ kit_new/copy_key.py	2026-11-24 21:32:20.943358286 +0800
+@@ -0,0 +1,72 @@
++#!/usr/bin/env python3
++"""把 AIDE_API_KEY 放進剪貼簿（不顯示在螢幕），按 Enter 或 45 秒後自動清空。
++只用系統已有的 python3-gi（GTK3）：不安裝任何東西、不留下背景行程、金鑰不經過命令列。
++結束（含 Ctrl+C）時一律清空剪貼簿。"""
++from __future__ import annotations
++
++import os
++import signal
++import sys
++
++TIMEOUT_S = 45
++
++
++def read_key(path: str) -> str:
++    try:
++        with open(path, encoding="utf-8") as f:
++            for line in f:
++                s = line.strip()
++                if s.startswith("AIDE_API_KEY="):
++                    return s.split("=", 1)[1].strip().strip("'\"")
++    except OSError:
++        pass
++    return ""
++
++
++def main() -> int:
++    if len(sys.argv) != 2:
++        print("用法：copy_key.py <env 檔>", file=sys.stderr)
++        return 2
++    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
++        print("沒有圖形桌面（DISPLAY／WAYLAND_DISPLAY），無法使用剪貼簿", file=sys.stderr)
++        return 1
++    key = read_key(sys.argv[1])
++    if not key:
++        print("讀不到 AIDE_API_KEY", file=sys.stderr)
++        return 1
++    import gi
++    gi.require_version("Gtk", "3.0")
++    gi.require_version("Gdk", "3.0")
++    from gi.repository import Gdk, GLib, Gtk
++    if not Gtk.init_check()[0]:
++        print("GTK 無法初始化", file=sys.stderr)
++        return 1
++    cb = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
++    cb.set_text(key, -1)           # 不呼叫 store()：不要求剪貼簿管理員另外保存一份
++    key = ""
++    done = {"v": False}
++
++    def finish(*_a):
++        if not done["v"]:
++            done["v"] = True
++            cb.set_text("", -1)
++            cb.clear()
++            Gtk.main_quit()
++        return False
++
++    GLib.timeout_add_seconds(TIMEOUT_S, finish)
++    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, finish)
++    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, finish)
++    try:
++        tty = open("/dev/tty")
++        GLib.io_add_watch(tty.fileno(), GLib.IO_IN, lambda *_a: finish())
++    except OSError:
++        pass
++    print(f"已放進剪貼簿（沒有顯示）。貼到 AI Studio 的 ENGINE_API_KEY 後，回到這裡按 Enter；{TIMEOUT_S} 秒後也會自動清空。")
++    Gtk.main()
++    print("剪貼簿已清空。")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff -ruN kit_orig/copy_key.sh kit_new/copy_key.sh
+--- kit_orig/copy_key.sh	2026-11-24 21:32:20.938358288 +0800
++++ kit_new/copy_key.sh	2026-11-24 21:32:20.944358286 +0800
+@@ -1,36 +1,13 @@
+ #!/usr/bin/env bash
+-# copy_key.sh — 把 AIDE_API_KEY 複製到剪貼簿（【不顯示】在螢幕、不寫入日誌、不放在命令列）。
+-# 用在把 ENGINE_API_KEY 貼進 AI Studio Secrets 時。貼完後請清空剪貼簿（或複製別的文字蓋掉）。
+-# 注意：有些桌面環境的「剪貼簿歷史」工具會保存複製過的內容，請自行確認。
+-# 用法：  ./copy_key.sh
++# copy_key.sh — 把 AIDE_API_KEY 放進剪貼簿（不顯示、不寫日誌、不放命令列），按 Enter 或 45 秒後自動清空。
++# 用在把 ENGINE_API_KEY 貼進 AI Studio Secrets 時。用系統已有的 python3-gi（GTK3），不需要安裝 xclip 等工具。
++# 注意：如果你的桌面有「剪貼簿歷史」工具，它可能保存複製過的內容，請自行確認。
+ set -Eeuo pipefail
+ # shellcheck source=lib.sh
+ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+-
+ [ -t 0 ] && [ -t 1 ] || die "請在互動式終端機手動執行（偵測到管線或重新導向），沒有複製任何東西"
+ [ -f "$ENV_FILE" ] || die "找不到 $ENV_FILE：請先 ./start_local.sh"
+ [ "$(stat -c %a "$ENV_FILE")" = 600 ] || die "$ENV_FILE 權限不是 600：先 chmod 600 再用"
+ env_name_set "$ENV_FILE" AIDE_API_KEY || die "設定檔沒有 AIDE_API_KEY"
+-
+-key="$(python3 - "$ENV_FILE" <<'PY'
+-import sys
+-for line in open(sys.argv[1], encoding="utf-8"):
+-    s = line.strip()
+-    if s.startswith("AIDE_API_KEY="):
+-        sys.stdout.write(s.split("=", 1)[1].strip().strip("'\""))
+-        break
+-PY
+-)"
+-if command -v wl-copy >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}" ]; then
+-  printf '%s' "$key" | wl-copy; tool=wl-copy
+-elif command -v xclip >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
+-  printf '%s' "$key" | xclip -selection clipboard; tool=xclip
+-elif command -v xsel >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
+-  printf '%s' "$key" | xsel --clipboard --input; tool=xsel
+-else
+-  key=""
+-  die "找不到剪貼簿工具（wl-copy／xclip／xsel）。請自己用文字編輯器開啟 $ENV_FILE，只複製 AIDE_API_KEY= 後面的值；不要把它貼到聊天或日誌"
+-fi
+-key=""
+-say "已用 $tool 複製 AIDE_API_KEY（沒有顯示）。到 AI Studio 的 Secrets 貼上 ENGINE_API_KEY，完成後請清空剪貼簿。"
+-log_event "金鑰已複製到剪貼簿（未顯示）"
++log_event "copy_key 執行（金鑰未顯示）"
++python3 "$AIDE_KIT_DIR/copy_key.py" "$ENV_FILE"
+diff -ruN kit_orig/demo_api.py kit_new/demo_api.py
+--- kit_orig/demo_api.py	2026-11-24 21:32:20.937358289 +0800
++++ kit_new/demo_api.py	2026-11-24 21:34:00.363332612 +0800
+@@ -20,6 +20,9 @@
+ import urllib.error
+ import urllib.request
+ 
++# 不使用 http_proxy／https_proxy 等環境變數：本機檢查不能繞去 proxy，帶著 X-API-Key 的請求也不能被送到 proxy
++OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
++
+ DOMAINS = ["sheep_barn", "expert_system_c22", "sanyegong_creek", "construction_site_cb13505",
+            "northeast_corner", "rearing_plant_1", "rearing_plant_1_north"]
+ WRITE_ENDPOINTS = ["sim/tick", "ingest", "commit", "rollback", "recompute"]
+@@ -44,7 +47,7 @@
+     data = None if body is None else json.dumps(body).encode()
+     req = urllib.request.Request(base.rstrip("/") + path, data=data, method=method, headers=headers)
+     try:
+-        with urllib.request.urlopen(req, timeout=timeout) as r:
++        with OPENER.open(req, timeout=timeout) as r:
+             return r.status, r.read().decode("utf-8", "replace")
+     except urllib.error.HTTPError as e:
+         return e.code, e.read().decode("utf-8", "replace")
+diff -ruN kit_orig/docker-compose.demo.yml kit_new/docker-compose.demo.yml
+--- kit_orig/docker-compose.demo.yml	2026-11-24 21:32:20.937358289 +0800
++++ kit_new/docker-compose.demo.yml	2026-11-24 21:34:00.363332612 +0800
+@@ -6,3 +6,5 @@
+   caddy:
+     ports: !override
+       - "127.0.0.1:8088:80"
++    # 固定在 Phase 6.7 CI 實際驗收通過的映像 digest（與 lib.sh 的 CADDY_IMAGE 相同；compose_gate 會核對）
++    image: caddy:2@sha256:4851e54a46b206517c574821bb5cc67f170d2156041e9fbc4c9193b45e84a75b
+diff -ruN kit_orig/lib.sh kit_new/lib.sh
+--- kit_orig/lib.sh	2026-11-24 21:32:20.937358289 +0800
++++ kit_new/lib.sh	2026-11-24 21:33:23.000338950 +0800
+@@ -7,6 +7,10 @@
+ #   * 不執行 sudo；需要 sudo 的事只「印出指令」讓使用者自己做。
+ #   * 不刪除 live_store、模型、版本紀錄；沒有任何 rm -rf 指向資料目錄。
+ 
++# 不允許在 xtrace 下執行：xtrace 會把金鑰變數的內容印到終端機或日誌
++case "$-" in *x*) echo "[停止] 不允許用 bash -x／set -x 執行這個套件（會把金鑰印出來）" >&2; exit 1 ;; esac
++case ",${SHELLOPTS:-}," in *,xtrace,*) echo "[停止] 偵測到 SHELLOPTS=xtrace（會把金鑰印出來），請先 unset SHELLOPTS" >&2; exit 1 ;; esac
++
+ AIDE_KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ 
+ # ---- 位置（可用環境變數覆蓋）
+@@ -15,6 +19,13 @@
+ BUNDLE_PATH="${AIDE_BUNDLE:-$DEMO_HOME/bundle/$BUNDLE_NAME}"
+ EXPECTED_ENGINE_SHA256="f088f8ed6795336b523ea62448b79a2d67ee6b709b129bfeee02ee9acc938149"   # 舊的 ffd4ec6f… 已失效，不可使用
+ EXPECTED_ENGINE_VERSION_PREFIX="aistudio-1.0.0"
++# 封包內『會決定暴露面』的檔案雜湊（來自已驗證的封包 f088f8ed…；解開後再核對一次，防止被改過）
++EXPECTED_COMPOSE_SHA256="74d6d11467cd126fef72b6239367ff4d84d6ecb660bd009691f4b3d243044553"
++EXPECTED_CADDYFILE_SHA256="79d9bda54fedf9aa9810667ca23dd831710755e11ac69c72f2d4d85773b06c76"
++EXPECTED_DOCKERFILE_SHA256="e14e5c3b78fc7106eb519d5fdb1da1d46f6c5ba2b784e0f0695bd7942d754b3b"
++EXPECTED_DOCKERIGNORE_SHA256="5fcdcb5a5bb3ffd35c10d10139bb5cc1b89ab6f625634bc0191b79eb2b96fc09"
++# Caddy 映像固定 digest（Phase 6.7 CI 實際拉到並通過驗收的那一個；不跟隨浮動標籤 caddy:2）
++CADDY_IMAGE="caddy:2@sha256:4851e54a46b206517c574821bb5cc67f170d2156041e9fbc4c9193b45e84a75b"
+ ENGINE_ROOT="$DEMO_HOME/engine"
+ ENGINE_DIR="$ENGINE_ROOT/aide"
+ DEPLOY_DIR="$ENGINE_DIR/deploy"
+@@ -49,8 +60,10 @@
+ DEFAULT_INTERVAL_S=900                       # 內部合成資料流每 15 分鐘推進一次（報告建議 300；這裡預設放慢以減少版本成長）
+ TUNNEL_MAX_HOURS="${AIDE_TUNNEL_MAX_HOURS:-4}"
+ 
+-# 引擎的 env 檔絕對不能出現的名稱（出現就拒絕啟動）
+-FORBIDDEN_ENV_NAMES='AIDE_ADMIN_KEY|AIDE_ALLOW_SIM|ENGINE_ADMIN_KEY|GEMINI_API_KEY|GEMINI_MODEL|GOOGLE_API_KEY'
++# 引擎 env 檔「只允許」這些名稱（白名單）；其他任何名稱一律拒絕。
++# 例如 AIDE_ADMIN_KEY／AIDE_ALLOW_SIM（開寫入）、GEMINI_*、AIDE_DATA_DIR（會把資料導離持久化掛載）、AIDE_ALLOWED_ORIGINS 都不在內。
++ALLOWED_ENV_NAMES='AIDE_DOMAIN|AIDE_API_KEY|AIDE_RATE_PER_MIN|AIDE_STALE_AFTER_H|AIDE_SIM_FEED|AIDE_SIM_INTERVAL_S|AIDE_SIM_HOURS'
++FORBIDDEN_ENV_NAMES='AIDE_ADMIN_KEY|AIDE_ALLOW_SIM|ENGINE_ADMIN_KEY|GEMINI_API_KEY|GEMINI_MODEL|GOOGLE_API_KEY|AIDE_DATA_DIR|AIDE_ALLOWED_ORIGINS'
+ 
+ # ---- 輸出（可計數）
+ PASS_N=0; WARN_N=0; FAIL_N=0; QUIET=0
+@@ -99,8 +112,12 @@
+ }
+ 
+ # 清掉 shell 環境裡可能讓引擎變成可寫入或啟用 Gemini 的變數（只影響這個腳本的子行程）
++# 同時清掉會改變 docker／compose 目標的變數（例如 DOCKER_HOST 指到別台機器、COMPOSE_FILE 換掉設定檔）。
+ sanitize_env() {
+   unset AIDE_ADMIN_KEY AIDE_ALLOW_SIM ENGINE_ADMIN_KEY GEMINI_API_KEY GEMINI_MODEL GOOGLE_API_KEY || true
++  unset DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH \
++        COMPOSE_FILE COMPOSE_PATH_SEPARATOR COMPOSE_PROFILES COMPOSE_ENV_FILES COMPOSE_PROJECT_NAME \
++        COMPOSE_IGNORE_ORPHANS COMPOSE_REMOVE_ORPHANS || true
+ }
+ 
+ # ---- 指令包裝
+@@ -114,18 +131,64 @@
+ # port_listeners PORT：列出本機正在監聽該埠的位址
+ port_listeners() { ss -ltn 2>/dev/null | awk -v p=":$1\$" '$4 ~ p {print $4}'; }
+ 
+-# 確認 PID 檔裡的行程真的是我們開的 cloudflared（避免誤殺別的行程）
++# 確認 PID 檔裡的行程真的是我們開的 cloudflared（指令列要有 cloudflared tunnel 與我們的 --url；避免 PID 被重用後誤殺別的行程）
+ tunnel_pid_alive() {
+   [ -f "$TUNNEL_PID_FILE" ] || return 1
+-  local pid; pid="$(cat "$TUNNEL_PID_FILE" 2>/dev/null || true)"
++  local pid args; pid="$(cat "$TUNNEL_PID_FILE" 2>/dev/null || true)"
+   [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+   kill -0 "$pid" 2>/dev/null || return 1
+-  ps -o args= -p "$pid" 2>/dev/null | grep -q 'cloudflared tunnel'
++  args="$(ps -o args= -p "$pid" 2>/dev/null || true)"
++  [[ "$args" == *"cloudflared tunnel"* && "$args" == *"--url $BASE_URL"* ]]
+ }
+ 
+ # 版本庫大小（KB）：只能從容器內量（主機目錄是 uid 10001 擁有，一般使用者讀不到）
+ store_kb() {
++  is_ours "$ENGINE_CONTAINER" || return 0
+   docker exec "$ENGINE_CONTAINER" du -sk /app/data/live_store 2>/dev/null | awk '{print $1}'
+ }
+ 
+ FREE_NOTE="本套件不會自動刪除任何資料；空間不足時請你自己決定要清理什麼（例如先停止資料流或備份後再處理）。"
++
++# ---------------------------------------------------------------- 設定檔檢查（白名單；只輸出行號與名稱，絕不輸出值）
++# 只允許：空行、# 註解行、NAME=值（NAME 為大寫英數底線；值不含空白；不可有 export、引號內換行、行內註解）
++env_grammar_problems() {
++  awk '/^[[:space:]]*$/ {next} /^[[:space:]]*#/ {next} /^[A-Z][A-Z0-9_]*=[^[:space:]]*$/ {next} {printf "%d ", NR; bad=1} END{exit bad}' "$1"
++}
++# 不在白名單內的名稱（只列名稱；呼叫前必須先通過 env_grammar_problems，否則可能把非名稱的行當成名稱）
++env_unexpected_names() {
++  grep -Ev '^[[:space:]]*(#|$)' "$1" | sed -nE 's/^([A-Z][A-Z0-9_]*)=.*/\1/p' | grep -Evx "$ALLOWED_ENV_NAMES" || true
++}
++# 取非機密欄位的值（不可用於 AIDE_API_KEY）
++env_value() { grep -E "^$2=" "$1" 2>/dev/null | tail -n 1 | cut -d= -f2- || true; }
++# env_file_problem FILE：有問題就印出一句話（不含任何值）並回傳 1
++env_file_problem() {
++  local f="$1" lines unexpected n
++  lines="$(env_grammar_problems "$f" || true)"
++  if [ -n "$lines" ]; then echo "格式不合（第 ${lines}行）：只允許空行、# 註解、NAME=值（值不能含空白、不能有 export 或行內註解）"; return 1; fi
++  unexpected="$(env_unexpected_names "$f" | tr '\n' ' ')"
++  if [ -n "$unexpected" ]; then echo "含有不在允許清單內的名稱：${unexpected}（只允許 ${ALLOWED_ENV_NAMES//|/、}；管理金鑰、模擬寫入、Gemini、AIDE_DATA_DIR 等一律不允許）"; return 1; fi
++  grep -Eq '^AIDE_API_KEY=[A-Za-z0-9]{32,}$' "$f" || { echo "AIDE_API_KEY 缺少，或不是 32 字元以上的英數字"; return 1; }
++  [ "$(env_value "$f" AIDE_DOMAIN)" = "http://:80" ] || { echo "AIDE_DOMAIN 必須是 http://:80（不可申請憑證）"; return 1; }
++  case "$(env_value "$f" AIDE_SIM_FEED)" in 0|1) ;; *) echo "AIDE_SIM_FEED 必須是 0 或 1"; return 1 ;; esac
++  for n in AIDE_RATE_PER_MIN AIDE_STALE_AFTER_H AIDE_SIM_INTERVAL_S AIDE_SIM_HOURS; do
++    [[ "$(env_value "$f" "$n")" =~ ^[0-9]+$ ]] || { echo "$n 必須是整數"; return 1; }
++  done
++  return 0
++}
++
++# ---------------------------------------------------------------- 暴露面檢查
++# loopback_only_text TEXT：docker port 的輸出，每一行都必須綁在 127.0.0.1；空輸入視為不合格
++loopback_only_text() {
++  [ -n "$1" ] || return 1
++  ! printf '%s\n' "$1" | grep -v -- "-> $LOCAL_HOST:" | grep -q .
++}
++caddy_ports_ok()   { loopback_only_text "$(docker port "$CADDY_CONTAINER" 2>/dev/null || true)"; }
++engine_unpublished() { [ -z "$(docker port "$ENGINE_CONTAINER" 2>/dev/null || true)" ]; }
++# is_ours CONTAINER：該容器必須屬於 compose 專案 $PROJECT（避免容器名稱撞到別的專案時，檢查或操作到別人的容器）
++is_ours() {
++  [ "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$1" 2>/dev/null || true)" = "$PROJECT" ]
++}
++# 啟動前守門：檢查「真正會被啟動」的 compose 設定（ports、環境、掛載、特權）。輸出只經管線給 python，不會顯示金鑰。
++compose_gate() { compose config --format json 2>/dev/null | python3 "$AIDE_KIT_DIR/compose_gate.py" "$CADDY_IMAGE"; }
++# Docker 目標必須是本機 unix socket（不是遠端 DOCKER_HOST）
++docker_endpoint() { docker context inspect "$(docker context show 2>/dev/null)" --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true; }
+diff -ruN kit_orig/preflight.sh kit_new/preflight.sh
+--- kit_orig/preflight.sh	2026-11-24 21:32:20.937358289 +0800
++++ kit_new/preflight.sh	2026-11-24 21:34:00.363332612 +0800
+@@ -18,6 +18,11 @@
+   esac
+ done
+ 
++for v in DOCKER_HOST DOCKER_CONTEXT COMPOSE_FILE COMPOSE_PROFILES COMPOSE_ENV_FILES COMPOSE_PROJECT_NAME; do
++  if [ -n "${!v:-}" ]; then warn "你的 shell 環境有 $v：腳本會忽略它（避免指到別的 Docker 目標或設定）"; fi
++done
++sanitize_env
++
+ [ "$QUIET" = 1 ] || say "== AIDE 展示 preflight（只檢查，不改變任何東西）  DEMO_HOME=$DEMO_HOME"
+ 
+ # ---------------------------------------------------------------- 1. 基本工具
+@@ -35,6 +40,11 @@
+     fail "docker 服務無法連線，或目前使用者沒有權限"
+     hint "確認服務已啟動；並把你自己的使用者加入 docker 群組後重新登入（這需要你自己用 sudo 做，本套件不會做）"
+   fi
++  ep="$(docker_endpoint)"
++  case "$ep" in
++    unix://*) pass "docker 目標是本機：$ep" ;;
++    *) fail "docker 目標不是本機 unix socket（${ep:-讀不到}）：拒絕使用"; hint "切回本機：docker context use default（並確認沒有設 DOCKER_HOST）" ;;
++  esac
+   cv="$(docker compose version --short 2>/dev/null || true)"
+   if [ -z "$cv" ]; then
+     fail "找不到 docker compose 外掛（需要 Compose v2）"
+@@ -92,6 +102,15 @@
+   else
+     fail "引擎 VERSION 不是 $EXPECTED_ENGINE_VERSION_PREFIX"
+   fi
++    # 決定暴露面的四個檔案，必須與已驗證封包內的逐位元相同
++  chk_hash() {  # 檔案 預期雜湊
++    local got; got="$(sha256sum "$ENGINE_DIR/$1" 2>/dev/null | awk '{print $1}')"
++    if [ "$got" = "$2" ]; then pass "雜湊相符：$1"; else fail "$1 與已驗證封包不同（被改過？）"; hint "不確定來源的目錄不會被使用；改名備份 $ENGINE_ROOT 後重跑 start_local.sh 會重新解開"; fi
++  }
++  chk_hash deploy/docker-compose.yml "$EXPECTED_COMPOSE_SHA256"
++  chk_hash deploy/Caddyfile "$EXPECTED_CADDYFILE_SHA256"
++  chk_hash Dockerfile "$EXPECTED_DOCKERFILE_SHA256"
++  chk_hash .dockerignore "$EXPECTED_DOCKERIGNORE_SHA256"
+   # 封包裡的 compose 必須仍是「引擎只 expose、不發佈 8080」的版本
+   if grep -Eq '^[[:space:]]+-[[:space:]]*"?[0-9.:]*8080:8080' "$ENGINE_DIR/deploy/docker-compose.yml" 2>/dev/null; then
+     fail "compose 檔把 8080 發佈到主機（不允許）"
+@@ -144,13 +163,12 @@
+ if [ -f "$ENV_FILE" ]; then
+   mode="$(stat -c %a "$ENV_FILE" 2>/dev/null || echo '?')"
+   if [ "$mode" = 600 ]; then pass "設定檔權限 600"; else fail "設定檔權限是 $mode，必須是 600"; hint "chmod 600 \"$ENV_FILE\""; fi
+-  if env_has_name "$ENV_FILE" "$FORBIDDEN_ENV_NAMES"; then
+-    fail "設定檔含有不允許的名稱（管理金鑰／模擬寫入／Gemini 金鑰）：本套件只允許唯讀設定"
+-    hint "請自己編輯 $ENV_FILE，移除 AIDE_ADMIN_KEY、AIDE_ALLOW_SIM、GEMINI_* 等行"
++  if problem="$(env_file_problem "$ENV_FILE")"; then
++    pass "設定檔通過白名單檢查（只有允許的名稱；沒有管理金鑰、模擬寫入、Gemini、AIDE_DATA_DIR）；金鑰不顯示"
+   else
+-    pass "設定檔沒有管理金鑰、模擬寫入或 Gemini 設定（唯讀）"
++    fail "設定檔不合格：$problem"
++    hint "請自己編輯 $ENV_FILE（本套件不會幫你改）；要重新產生就刪掉它再跑 start_local.sh（會換新金鑰）"
+   fi
+-  env_name_set "$ENV_FILE" AIDE_API_KEY && pass "設定檔有 AIDE_API_KEY（不顯示）" || fail "設定檔沒有 AIDE_API_KEY"
+ else
+   [ "$QUIET" = 1 ] || say "[ 資訊 ] 設定檔尚未建立（第一次執行 start_local.sh 時會產生並設成權限 600）"
+ fi
+@@ -158,6 +176,13 @@
+   if [ -n "${!v:-}" ]; then warn "你的 shell 環境有 $v：腳本會把它清掉，不會傳給引擎"; fi
+ done
+ 
++# 容器名稱撞到別的專案：不碰別人的容器
++for c in "$ENGINE_CONTAINER" "$CADDY_CONTAINER"; do
++  if docker inspect "$c" >/dev/null 2>&1 && ! is_ours "$c"; then
++    fail "已經有一個不屬於 $PROJECT 專案、名稱也叫 $c 的容器：拒絕啟動（不會動它）"
++  fi
++done
++
+ # ---------------------------------------------------------------- 9. 目前是否已有公開網址
+ if tunnel_pid_alive; then warn "Quick Tunnel 目前正在執行（網址：$(cat "$TUNNEL_URL_FILE" 2>/dev/null || echo '未知')）"; else pass "目前沒有本套件開的 Tunnel"; fi
+ 
+diff -ruN kit_orig/README.md kit_new/README.md
+--- kit_orig/README.md	2026-11-24 21:32:20.938358288 +0800
++++ kit_new/README.md	2026-11-24 21:36:01.174335785 +0800
+@@ -19,8 +19,8 @@
+ | `start_tunnel.sh` | 開 Quick Tunnel；只能由你在終端機手動執行，並親自輸入確認句 |
+ | `stop_demo.sh` | 停止 Tunnel 與容器，**不刪除任何資料** |
+ | `status.sh` | 引擎／Tunnel／唯讀狀態、磁碟、版本庫大小、各場域版本、成長估計 |
+-| `copy_key.sh` | （額外）把 API 金鑰複製到剪貼簿，不顯示在螢幕 |
+-| `lib.sh`、`demo_api.py`、`docker-compose.demo.yml` | 共用函式、HTTP 檢查小工具、Caddy 只綁本機的覆蓋檔 |
++| `copy_key.sh`＋`copy_key.py` | （額外）把 API 金鑰放進剪貼簿，不顯示在螢幕；按 Enter 或 45 秒後自動清空。用系統已有的 python3-gi（GTK3），不需要安裝 xclip |
++| `lib.sh`、`demo_api.py`、`compose_gate.py`、`docker-compose.demo.yml` | 共用函式、HTTP 檢查小工具、啟動前 compose 守門、Caddy 只綁本機的覆蓋檔（Caddy 映像固定 digest） |
+ 
+ ## 資料放在哪裡
+ 
+@@ -35,6 +35,18 @@
+ 
+ 要換位置：`export AIDE_DEMO_HOME=/別的路徑`（每支腳本都吃這個變數）。
+ 
++## 安裝會改變你 Ubuntu 的哪些地方（安裝前請先看）
++
++| 步驟 | 會改變 | 影響 |
++|---|---|---|
++| 安裝 Docker（官方套件庫） | 新增 apt 來源與金鑰；安裝 docker-ce、containerd.io 等；**docker 服務開機自動啟動**；Docker 會修改防火牆規則並把 `net.ipv4.ip_forward` 設成 1（目前是 0）；映像與快取放在 `/var/lib/docker`（約 1.5 GB） | 這台目前**沒有**任何 docker／podman／containerd／runc 套件，所以官方文件的「移除衝突套件」步驟不會刪到你現有的東西。Docker 預設網段（172.17.0.0/16 起）與你目前的區網 192.168.1.0/24 不衝突；若你之後連 VPN 用了 172.x 網段才需要留意 |
++| `sudo usermod -aG docker "$USER"` | 你的使用者加入 docker 群組，需重新登入 | **docker 群組等同 root 權限**（能掛載任何目錄）。這是這個展示的權衡；不想長期保留，展示結束後可用 `sudo gpasswd -d "$USER" docker` 移除 |
++| 安裝 cloudflared | 新增 Cloudflare 的 apt 來源與金鑰；之後 `apt upgrade` 會從那裡更新它 | 只安裝程式，**不會**建立任何 Tunnel 或常駐服務（我們不執行 `cloudflared service install`） |
++| `sudo install -d … /var/lib/aide/live_store /var/backups/aide` | 新增兩個目錄（擁有者 uid 10001） | 只有引擎容器會用 |
++| 第一次 `start_local.sh` | 新增 `~/aide-demo/`；下載 Python 套件與 Caddy 映像；啟動兩個容器 | 容器設了 `restart: unless-stopped`：**電腦重開機後，引擎與 Caddy 會自動回來**（仍然只綁 127.0.0.1；Tunnel 不會自動回來）。要徹底停掉請用 `./stop_demo.sh` |
++
++不會改變：你現有的 Python／Node／其他開發環境、ssh、防火牆規則（ufw 不動；我們的連接埠只綁 127.0.0.1）、任何現有專案與檔案。
++
+ ## 第一次安裝（只做一次）
+ 
+ 下面每一步都由你執行；套件不會幫你安裝任何東西。
+@@ -147,10 +159,17 @@
+ - 要減緩成長：`./start_local.sh --interval 1800`（放慢）或 `--no-feed`（凍結）。要清理舊版本、備份或搬移，由你自己決定與操作。
+ - 測得的粗估（本機測試，15 秒一輪）：約 4 輪後版本庫 1.3 MB。長時間成長**沒有驗證過**。
+ 
++## 剪貼簿與金鑰的使用方式
++
++- `./copy_key.sh` 把金鑰放進剪貼簿（螢幕上不顯示），**貼好後回到終端機按 Enter 就立刻清空**；沒按的話 45 秒後自動清空；Ctrl+C 也會清空。它不留下背景行程，金鑰不經過命令列。
++- 限制：X11 桌面上，任何程式在剪貼簿有內容的期間都讀得到它；若你的桌面有「剪貼簿歷史」工具，它可能保存一份。這就是只放 45 秒、貼完立刻清的原因。
++- Quick Tunnel 由 Cloudflare 終止 TLS：Cloudflare 的邊緣看得到所有流量，包含 `X-API-Key`。所以**這把金鑰只該用在這個展示，用完就換**：`./stop_demo.sh` → 刪除 `~/aide-demo/state/demo.env` → 下次 `./start_local.sh` 會產生新金鑰 → 更新 AI Studio 的 `ENGINE_API_KEY`。
++- 金鑰在容器環境變數裡：docker 群組的人用 `docker inspect aide-engine` 看得到。單人電腦可以接受；多人共用的電腦不要用這個方式。
++
+ ## 安全設計摘要
+ 
+ - 金鑰只在 `~/aide-demo/state/demo.env`（權限 600）。腳本不 `cat`、不 `echo`、不放命令列、不寫進日誌、不用 `set -x`；`demo_api.py` 只把金鑰放進請求標頭，例外只印類別名稱。
+-- 不設定 `AIDE_ADMIN_KEY`、`AIDE_ALLOW_SIM`、`ENGINE_ADMIN_KEY`、Gemini／Google 金鑰；設定檔含這些名稱就拒絕啟動，shell 環境裡的同名變數會被清掉。
++- 設定檔採**白名單**：只允許 `AIDE_DOMAIN`、`AIDE_API_KEY`、`AIDE_RATE_PER_MIN`、`AIDE_STALE_AFTER_H`、`AIDE_SIM_FEED`、`AIDE_SIM_INTERVAL_S`、`AIDE_SIM_HOURS`，其他任何名稱（管理金鑰、模擬寫入、Gemini、`AIDE_DATA_DIR`、`AIDE_ALLOWED_ORIGINS`…）都拒絕啟動；shell 環境裡的同名變數與 `DOCKER_*`／`COMPOSE_*` 會被清掉。啟動前還會用 `compose_gate.py` 檢查『真正會被啟動的 compose 設定』（只綁 127.0.0.1:8088、引擎不發佈、掛載固定、無特權、Caddy 映像固定 digest）。
+ - Caddy 只綁 `127.0.0.1:8088`；引擎 8080 只在容器網路內；啟動後會檢查 `docker port` 與本機監聽位址。
+ - 腳本不呼叫 `sudo`（需要時只印指令給你）、不安裝軟體、不推送 GitHub、不使用任何付費服務。
+ - `/health` 不需要金鑰，會公開引擎版本、函式庫版本與各資料集雜湊（Node 的連線探測需要它；風險低，接受）。
+diff -ruN kit_orig/start_local.sh kit_new/start_local.sh
+--- kit_orig/start_local.sh	2026-11-24 21:32:20.937358289 +0800
++++ kit_new/start_local.sh	2026-11-24 21:34:30.266330177 +0800
+@@ -62,12 +62,12 @@
+ if [ ! -f "$ENV_FILE" ]; then
+   (
+     umask 077
+-    key="$(openssl rand -hex 32)"
++    # 金鑰不放進任何 shell 變數：直接由 openssl 經管線寫進檔案（就算被 xtrace 也看不到值）
+     {
+       echo "# AIDE 本機唯讀展示設定。這個檔案含有金鑰：權限必須是 600，不要貼到任何地方。"
+       echo "# 刻意沒有 AIDE_ADMIN_KEY、AIDE_ALLOW_SIM、任何 Gemini／Google 金鑰（唯讀）。"
+       echo "AIDE_DOMAIN=http://:80"
+-      echo "AIDE_API_KEY=$key"
++      openssl rand -hex 32 | sed 's/^/AIDE_API_KEY=/'
+       echo "AIDE_RATE_PER_MIN=600"
+       echo "AIDE_STALE_AFTER_H=6"
+       echo "AIDE_SIM_FEED=1"
+@@ -79,15 +79,15 @@
+   log_event "env 檔已建立（金鑰未顯示）"
+ fi
+ chmod 600 "$ENV_FILE"
+-env_has_name "$ENV_FILE" "$FORBIDDEN_ENV_NAMES" && die "設定檔含有不允許的名稱（管理金鑰／模擬寫入／Gemini）。本套件只允許唯讀設定，請移除後再啟動"
+-env_name_set "$ENV_FILE" AIDE_API_KEY || die "設定檔沒有 AIDE_API_KEY"
+ if [ -n "$INTERVAL" ]; then sed -i -E "s/^AIDE_SIM_INTERVAL_S=.*/AIDE_SIM_INTERVAL_S=$INTERVAL/" "$ENV_FILE"; fi
+ if [ "$NO_FEED" = 1 ]; then sed -i -E "s/^AIDE_SIM_FEED=.*/AIDE_SIM_FEED=0/" "$ENV_FILE"; fi
+ chmod 600 "$ENV_FILE"
+ if [ -e "$DEPLOY_DIR/.env" ] && [ ! -L "$DEPLOY_DIR/.env" ]; then die "$DEPLOY_DIR/.env 已經是一個一般檔案：不覆蓋，請你自己確認後處理"; fi
+ ln -sfn "$ENV_FILE" "$DEPLOY_DIR/.env"
+-feed_now="$(grep -E '^AIDE_SIM_FEED=' "$ENV_FILE" | tail -n 1 | cut -d= -f2)"
+-int_now="$(grep -E '^AIDE_SIM_INTERVAL_S=' "$ENV_FILE" | tail -n 1 | cut -d= -f2)"
++# 白名單檢查（在 --interval／--no-feed 修改之後再做）：任何不在清單內的名稱、格式問題、缺值都拒絕啟動
++problem="$(env_file_problem "$ENV_FILE")" || die "設定檔不合格：$problem"
++feed_now="$(env_value "$ENV_FILE" AIDE_SIM_FEED)"
++int_now="$(env_value "$ENV_FILE" AIDE_SIM_INTERVAL_S)"
+ say "資料流：AIDE_SIM_FEED=$feed_now、每 ${int_now} 秒一輪（合成資料，帶 SYNTHETIC 標記）"
+ 
+ say "== 4/8 再檢查一次（含設定檔）"
+@@ -95,8 +95,10 @@
+ 
+ # ------------------------------------------------------------------ 5. compose 設定與建置
+ say "== 5/8 compose 設定驗證與映像"
+-errs="$(compose config -q 2>&1 >/dev/null || true)"
+-[ -z "$errs" ] || { printf '%s\n' "$errs" >&2; die "docker compose config 有警告或錯誤"; }
++# 注意：絕不印出 `compose config` 的完整輸出（它會把 env 檔內容展開，含 API 金鑰）；錯誤訊息也不原樣轉印
++if [ -n "$(compose config -q 2>&1 >/dev/null || true)" ]; then die "docker compose config 有警告或錯誤（為避免洩漏設定內容，不顯示細節；請檢查 $DEPLOY_DIR/docker-compose.yml 與 $AIDE_KIT_DIR/docker-compose.demo.yml）"; fi
++compose_gate || die "compose 設定不符合『只綁 127.0.0.1:8088、引擎不發佈、唯讀、固定掛載』：未建置也未啟動"
++say "compose 守門通過：只綁 127.0.0.1:8088、引擎 8080 不發佈、沒有管理金鑰／Gemini／AIDE_DATA_DIR、掛載固定、Caddy 映像固定 digest"
+ if [ "$REBUILD" = 1 ] || ! docker image inspect "$ENGINE_IMAGE" >/dev/null 2>&1; then
+   say "建置引擎映像（第一次會下載 Python 套件，需要幾分鐘；日誌：$BUILD_LOG）"
+   ( umask 077; : > "$BUILD_LOG" )
+@@ -121,7 +123,7 @@
+ done
+ [ "$healthy" = 1 ] || die "引擎 180 秒內沒有變成 healthy（用 docker logs $ENGINE_CONTAINER --tail 30 查看）"
+ up=0
+-for _ in $(seq 1 30); do curl -fsS --max-time 3 "$BASE_URL/health" >/dev/null 2>&1 && { up=1; break; }; sleep 2; done
++for _ in $(seq 1 30); do curl -fsS --noproxy '*' --max-time 3 "$BASE_URL/health" >/dev/null 2>&1 && { up=1; break; }; sleep 2; done
+ [ "$up" = 1 ] || die "Caddy 沒有回應 $BASE_URL/health"
+ 
+ # ------------------------------------------------------------------ 7. 唯讀與暴露面驗證（任何一項失敗都會停止容器）
+@@ -129,10 +131,9 @@
+ api readonly --base "$BASE_URL" || die "引擎不是唯讀（live_writes_enabled 或 live_sim_enabled 不是 false）"
+ api unauth --base "$BASE_URL" || die "無金鑰或錯誤金鑰沒有被擋成 401"
+ api deny-writes --base "$BASE_URL" || die "寫入端點沒有全部拒絕"
+-published="$(docker port "$CADDY_CONTAINER" 2>/dev/null || true)"
+-[ -n "$published" ] || die "讀不到 Caddy 的連接埠發佈資訊"
+-if printf '%s\n' "$published" | grep -v -- "-> $LOCAL_HOST:" | grep -q .; then die "Caddy 發佈到迴路以外的位址：$published"; fi
+-[ -z "$(docker port "$ENGINE_CONTAINER" 2>/dev/null || true)" ] || die "引擎容器有對主機發佈連接埠（8080 不可發佈）"
++is_ours "$ENGINE_CONTAINER" && is_ours "$CADDY_CONTAINER" || die "容器不屬於 $PROJECT 專案（名稱被別的專案佔用？）"
++caddy_ports_ok || die "Caddy 的連接埠發佈不是『每一行都綁在 $LOCAL_HOST』（或讀不到）"
++engine_unpublished || die "引擎容器有對主機發佈連接埠（8080 不可發佈）"
+ if port_listeners "$LOCAL_PORT" | grep -v "^$LOCAL_HOST:" | grep -q .; then die "$LOCAL_PORT 有非迴路位址在監聽"; fi
+ if docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$ENGINE_CONTAINER" | cut -d= -f1 | grep -Eq "^($FORBIDDEN_ENV_NAMES)$"; then die "引擎容器環境變數含有不允許的名稱"; fi
+ say "確認：唯讀、寫入端點全部拒絕、只綁 $LOCAL_HOST:$LOCAL_PORT、引擎 8080 未發佈、沒有管理金鑰或 Gemini 設定"
+diff -ruN kit_orig/start_tunnel.sh kit_new/start_tunnel.sh
+--- kit_orig/start_tunnel.sh	2026-11-24 21:32:20.938358288 +0800
++++ kit_new/start_tunnel.sh	2026-11-24 21:34:00.363332612 +0800
+@@ -54,9 +54,11 @@
+ api readonly --base "$BASE_URL" || die "引擎不是唯讀：不開 Tunnel"
+ api unauth --base "$BASE_URL" || die "無金鑰沒有被擋成 401：不開 Tunnel"
+ api deny-writes --base "$BASE_URL" || die "寫入端點沒有全部拒絕：不開 Tunnel"
+-published="$(docker port "$CADDY_CONTAINER" 2>/dev/null || true)"
+-printf '%s\n' "$published" | grep -q -- "-> $LOCAL_HOST:$LOCAL_PORT" || die "Caddy 沒有綁在 $LOCAL_HOST:$LOCAL_PORT"
+-[ -z "$(docker port "$ENGINE_CONTAINER" 2>/dev/null || true)" ] || die "引擎 8080 被發佈了：不開 Tunnel"
++is_ours "$ENGINE_CONTAINER" && is_ours "$CADDY_CONTAINER" || die "容器不屬於 $PROJECT 專案：不開 Tunnel"
++caddy_ports_ok || die "Caddy 的連接埠發佈不是『每一行都綁在 $LOCAL_HOST』：不開 Tunnel"
++docker port "$CADDY_CONTAINER" | grep -q -- "-> $LOCAL_HOST:$LOCAL_PORT" || die "Caddy 沒有綁在 $LOCAL_HOST:$LOCAL_PORT：不開 Tunnel"
++engine_unpublished || die "引擎 8080 被發佈了：不開 Tunnel"
++compose_gate || die "compose 設定不符合預期：不開 Tunnel"
+ g="$(free_gb "$LIVE_STORE_HOST")"
+ [ -n "$g" ] && [ "$g" -ge "$MIN_FREE_GB" ] || die "磁碟可用空間不足（${g:-?} GB < ${MIN_FREE_GB} GB）：不開 Tunnel。$FREE_NOTE"
+ kb="$(store_kb || true)"
+@@ -75,6 +77,8 @@
+   * 唯一的保護是：(1) API 金鑰（沒有金鑰的請求一律 401）(2) 唯讀設定（沒有管理金鑰，
+     匯入／提交／回復／重算／模擬推進全部 403）(3) Caddy 只轉送 /health 與 /v1/*。
+   * /health 不需要金鑰：會公開引擎版本、函式庫版本與各資料集雜湊。
++  * Quick Tunnel 由 Cloudflare 終止 TLS：Cloudflare 的邊緣伺服器看得到所有流量，包含 X-API-Key。
++    所以這把金鑰只該用在這個展示；用完請換新（刪除 demo.env 後重新 start_local.sh，再更新 AI Studio）。
+   * 引擎依來源 IP 限流；經 Tunnel 後所有人共用同一個額度。有人灌請求時，你自己的 App
+     可能暫時收到 429（Quick Tunnel 同時最多 200 個處理中請求，超過也回 429）。
+   * 網址每次重開都會變；Tunnel 停止後網址立刻失效。官方說明：Quick Tunnel 只供測試與開發，
+@@ -96,7 +100,7 @@
+ ( umask 077; : > "$TUNNEL_LOG" )
+ TUNNEL_STARTED=1
+ setsid bash -c 'echo $$ > "$1"; shift; exec "$@"' _ "$TUNNEL_PID_FILE" \
+-  timeout --signal=TERM "$secs" cloudflared tunnel --no-autoupdate --url "$BASE_URL" \
++  timeout --signal=TERM --kill-after=30 "$secs" cloudflared tunnel --no-autoupdate --url "$BASE_URL" \
+   >> "$TUNNEL_LOG" 2>&1 < /dev/null &
+ date +%s > "$TUNNEL_STARTED_FILE"
+ url=""
+@@ -113,7 +117,7 @@
+ say "== 4/4 從公開網址驗證"
+ ok=0
+ for _ in $(seq 1 15); do
+-  if curl -fsS --max-time 10 "$url/health" >/dev/null 2>&1; then ok=1; break; fi
++  if curl -fsS --noproxy '*' --max-time 10 "$url/health" >/dev/null 2>&1; then ok=1; break; fi
+   sleep 3
+ done
+ [ "$ok" = 1 ] || die "公開網址 $url 的 /health 沒有回應（DNS 可能還沒生效；Tunnel 已關閉，可重試）"
+diff -ruN kit_orig/status.sh kit_new/status.sh
+--- kit_orig/status.sh	2026-11-24 21:32:20.938358288 +0800
++++ kit_new/status.sh	2026-11-24 21:34:00.364332612 +0800
+@@ -32,9 +32,10 @@
+   pub="$(docker port "$CADDY_CONTAINER" 2>/dev/null || true)"
+   if [ -n "$pub" ]; then
+     say "  Caddy 對主機發佈：$(printf '%s' "$pub" | tr '\n' ' ')"
+-    if printf '%s\n' "$pub" | grep -v -- "-> $LOCAL_HOST:" | grep -q .; then say "  !! Caddy 發佈到迴路以外的位址"; raise 2; fi
++    if ! loopback_only_text "$pub"; then say "  !! Caddy 發佈到迴路以外的位址"; raise 2; fi
++    if ! is_ours "$CADDY_CONTAINER"; then say "  !! $CADDY_CONTAINER 不屬於 $PROJECT 專案（名稱被別的專案佔用）"; raise 2; fi
+   fi
+-  if [ -z "$(docker port "$ENGINE_CONTAINER" 2>/dev/null || true)" ]; then say "  引擎 8080：未發佈到主機（正確）"; else say "  !! 引擎容器有對主機發佈連接埠"; raise 2; fi
++  if engine_unpublished; then say "  引擎 8080：未發佈到主機（正確）"; else say "  !! 引擎容器有對主機發佈連接埠"; raise 2; fi
+ fi
+ 
+ # ---------------------------------------------------------------- 唯讀狀態
+@@ -69,7 +70,7 @@
+   say "  !! 目前任何知道網址的人都連得到入口（仍需 API 金鑰才拿得到資料）。用完請 ./stop_demo.sh"
+   raise 1
+   if [ "$CHECK_TUNNEL" = 1 ] && [ "$url" != "未知" ]; then
+-    if curl -fsS --max-time 10 "$url/health" >/dev/null 2>&1; then
++    if curl -fsS --noproxy '*' --max-time 10 "$url/health" >/dev/null 2>&1; then
+       say "  公開側 /health：200"
+       api unauth --base "$url" | sed 's/^/  公開側：/' || { say "  !! 公開側的無金鑰檢查不是 401"; raise 2; }
+     else

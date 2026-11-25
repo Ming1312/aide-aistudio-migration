@@ -1,0 +1,13 @@
+# 與模型檔訓練／驗收時完全相同的版本（Python 3.13）。.joblib 是 pickle，版本不同可能無法載入或結果不同。
+pandas==3.0.5
+numpy==2.5.3
+scipy==1.18.1
+scikit-learn==1.9.1
+joblib==1.6.0
+xgboost-cpu==3.4.1
+PyYAML==6.0.3
+openpyxl==3.1.5
+fastapi==0.165.0
+uvicorn==0.54.0
+httpx==0.28.1
+pydantic==2.14.4

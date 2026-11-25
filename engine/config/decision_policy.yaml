@@ -1,0 +1,72 @@
+# JNC Risk-Aware Decision Engine — 決策政策設定檔（Phase 3）
+#
+# 讀法：先讀 defaults，再用 sites.<site> 覆蓋（不同場域可用不同規則）。
+# 標示 [design] 的數字是「事先決定的設計選擇」，不是用測試資料調出來的最佳值；
+# 標示 [from-model] 的值不寫在這裡，而是由當時可用的模型自己的內層驗證資料決定。
+# 沒有任何門檻在此被宣稱為 JNC 官方標準。
+schema_version: 1
+policy_version: "phase3.0.0"
+
+defaults:
+  site_label: "羊舍 成羊區"
+  risk:
+    target: THI
+    threshold: 84                       # 候選分析門檻，不是 JNC 確認的安全標準
+    threshold_status: experimental      # experimental = 研究用；confirmed 只有 JNC 書面確認後才能使用
+    candidate_thresholds: [83, 84, 85]  # 模型訓練時有校正過警報線的門檻；其他值會被拒絕
+    forecast_horizon_hours: 3
+
+    levels:
+      # Warning 的機率門檻 [from-model]：使用模型自己的 alert_cutoff
+      #   （Phase 2.5：在『內層 walk-forward 樣本外資料』上，Recall ≥ 0.9 時 FPR 最低的線）。
+      #   注意：這條線只用 5 天（約 117 筆）選出，折與折之間很不穩，所以不寫死成 0.5 / 0.8。
+      warning_probability: from_model_alert_cutoff
+      caution_fraction_of_alert_cutoff: 0.5     # [design] 機率到警報線的一半 → 提醒注意（未調參）
+      caution_if_interval_upper_ge_threshold: true   # 區間上界跨過門檻 → 不可判為完全安全
+      critical:
+        require_reliable: true                  # 資料不是完全可信時，不得升到 Critical
+        interval_lower_ge_threshold: true       # 90% 區間下界也 ≥ 門檻（連樂觀情況都超標）
+        current_and_point_ge_threshold: true    # 目前已超標，且預測 3 小時後仍超標
+
+  uncertainty:
+    # [design] 區間寬度 > factor × 參考寬度 → high_uncertainty。
+    # 參考寬度 = 2 × (模型內層樣本外 |殘差| 的 90 百分位)，在模型凍結時就已知。
+    high_width_factor: 1.5
+
+  reliability:
+    degraded_max_level: warning         # 用溫濕度重建 THI 時，最高只到 Warning（不給 Critical）
+    unreliable_suppresses_equipment_actions: true
+
+  operations:
+    requires_human_confirmation: true
+    actuation_allowed: false            # 本系統不控制任何設備
+    device_status_codes_verified: false # JNC 尚未確認設備狀態碼意義：不得解讀任何設備代碼
+    allowed_actions:
+      - continue_monitoring
+      - increase_monitoring
+      - verify_sensor_source
+      - manual_remeasure
+      - inspect_fan
+      - inspect_ventilation
+      - inspect_curtain
+      - notify_manager
+      - request_human_confirmation
+
+  alert_management:                     # 全部是 [design]；比較與敏感度見 outputs/phase3/alert_evaluation.xlsx
+    stream_high_thi:
+      persistence_hours: 2              # 連續 2 小時達 Warning 才啟動（Critical 例外）
+      hysteresis:
+        enabled: true
+        clear_ratio: 0.7                # 解除條件：機率 < 0.7 × 警報線（進入用 1.0 × 警報線）
+        clear_hours: 2                  # 且連續 2 小時
+      cooldown_hours: 3                 # 兩次『通知』至少間隔 3 小時（Critical 例外）
+      renotify_hours: 6                 # 警報持續且未被確認時，每 6 小時提醒一次
+      critical_bypass: true             # Critical 不受持續性與冷卻限制（不可關閉成預設）
+      critical_repeat_hours: 2          # 同一次警報內重複的 Critical 通知最小間隔
+    stream_data_quality:
+      clear_hours: 2
+
+sites:
+  sheep_barn: {}                        # 羊舍使用 defaults；其他場域之後在此覆蓋，例如：
+  # beef_barn_north:
+  #   risk: {threshold: 86, threshold_status: experimental}
