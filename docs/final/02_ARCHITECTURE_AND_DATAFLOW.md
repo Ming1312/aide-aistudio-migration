@@ -7,7 +7,7 @@
 | 層 | 內容 | 在哪裡執行 | 本 repo 位置 |
 |---|---|---|---|
 | **研究層**（原始研究專案） | 資料稽核、羊舍 THI 預測、風險感知框架、決策引擎、異常偵測、資料更新與模型維護、Streamlit 內部平台 | 本機（`handoff_extracted/`） | **不在本 repo**；沒有被修改，原始研究結果與模型凍結 |
-| **引擎層**（Python 唯讀 API） | 從研究層取出、以 FastAPI 提供的預測／異常／決策輔助／即時資料流；Docker＋Caddy 部署 | 使用者電腦上的 Docker（`demo_kit/`），私有 | `engine/`（文字原始碼）、`ci/inputs/aide-engine-…tar.gz`（含模型與資料的完整封包） |
+| **引擎層**（Python 唯讀 API） | 從研究層取出、以 FastAPI 提供的預測／異常／決策輔助／即時資料流；Docker＋Caddy 部署 | 使用者電腦上的 Docker（`demo_kit/`），只在本機執行、不對公網開放 | `engine/`（文字原始碼）、`ci/inputs/aide-engine-…tar.gz`（含模型與資料的完整封包） |
 | **展示層**（AI Studio App） | React 前端＋Express/Node 伺服器；Node 代理引擎、保管 Secrets、呼叫 Gemini（選用） | Google AI Studio（Build Mode）或本機 `npm run dev` | 專案根目錄（`src/`、`server/`、`server.ts`） |
 
 ## 2　資料流

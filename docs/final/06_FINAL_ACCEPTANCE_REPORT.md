@@ -8,7 +8,7 @@
 
 | 項目 | 狀態 |
 |---|---|
-| GitHub（private）`Ming1312/aide-aistudio-migration` 分支 `release/aide-v1.1.0` | App、引擎文字原始碼、CI、`demo_kit`、文件的最新完整版。App／引擎程式碼最後一次變更：commit `32934f1c2016dce0b065e4c3a8fccf57c2e9fcec`；之後的 commit 只新增／修改文件（確切 SHA 見最終交付清單） |
+| GitHub（**public**，2026-11-25 公開）`Ming1312/aide-aistudio-migration` 分支 `release/aide-v1.1.0` | App、引擎文字原始碼、CI、`demo_kit`、文件的最新完整版。App／引擎程式碼最後一次變更：commit `32934f1c2016dce0b065e4c3a8fccf57c2e9fcec`；之後的 commit 只新增／修改文件（確切 SHA 見最終交付清單） |
 | `main`（`7d266da`）、`ci/docker-acceptance`（`12e8f9a`） | 保留原樣，沒有被改動、沒有強制推送 |
 | AI Studio 專案 `f4255ec4-…` | 2026-11-25 匯出（SHA-256 `9172b982…f91bf4fa`）；與 GitHub 版逐檔比對，只有 5 個**刻意的差異**：`package.json`（`npm test` 改為跑全部 9 個測試檔）、`.gitignore`、`.env.example`（只列名稱）、`README.md`、`DATA_DICTIONARY.csv`（AI Studio 匯出去掉了 UTF-8 BOM，GitHub 保留原樣） |
 | 本機原始碼 | 本機 `~/下載/aide-aistudio-migration.zip` 與 AI Studio 匯出相同；舊（11/24）匯出保存在 `ci/inputs/`（SHA-256 `dc223844…`），與新匯出**只差 F13 的三個檔案** |
@@ -101,7 +101,7 @@
 | Docker 容器 | 已停止並移除（`docker ps` 為空） |
 | Cloudflare Tunnel | 已關閉；沒有 cloudflared 行程；127.0.0.1:8088 沒有監聽 |
 | 舊 demo 金鑰 | 已刪除（`demo.env`）；下次 `start_local.sh` 產生新金鑰 |
-| GitHub Repository | 仍為 private；沒有提交金鑰、`.env`、日誌或執行中的版本庫（提交前以內容掃描確認） |
+| GitHub Repository | 已於 2026-11-25 依使用者指示改為公開（含原始 CSV 與模型；公開前已掃描全部 8 個 commit，沒有金鑰或密碼）；沒有提交金鑰、`.env`、日誌或執行中的版本庫（提交前以內容掃描確認） |
 | 費用 | 0（沒有信用卡、付費資源、付費 API） |
 | 保留 | 模型、資料、版本紀錄（`/var/lib/aide/live_store`）、備份、映像與測試證據都保留 |
 

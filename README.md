@@ -6,11 +6,11 @@
 | 部分 | 內容 | 執行位置 |
 |---|---|---|
 | **App**（本 repo 根目錄） | React + Express/Node。Google AI Studio Build Mode 產生並匯出的版本；Node 端代理 Python 引擎、保管 Secrets | AI Studio（Cloud Run）或本機 `npm run dev` |
-| **Python 引擎**（`engine/`、`ci/inputs/`） | FastAPI；HGB／XGBoost 與基準模型；唯讀 API、合成資料流、決策輔助 | 你自己電腦上的 Docker（`demo_kit/`），私有、不公開 |
+| **Python 引擎**（`engine/`、`ci/inputs/`） | FastAPI；HGB／XGBoost 與基準模型；唯讀 API、合成資料流、決策輔助 | 你自己電腦上的 Docker（`demo_kit/`），只在本機執行、不對公網開放（封包檔案本身在本 repo 內） |
 
 原始 Streamlit 研究專案與其模型、凍結的研究結果**不在、也沒有被這個 repo 修改**。
 
-> 這個 repo 含七場域的真實資料（使用者已聲明可公開展示；來源與使用聲明見 `public/data/real_public/DATA_USE_STATEMENT.md`）與合成展示資料，兩者分開標示。**目前是 private repository，未經確認不要改成公開。**
+> 這個 repo 含七場域的真實資料（使用者已聲明可公開展示；來源與使用聲明見 `public/data/real_public/DATA_USE_STATEMENT.md`）與合成展示資料，兩者分開標示。**自 2026-11-25 起本 repository 為公開（public）**，包含七場域真實資料，以及 `ci/inputs/` 引擎封包內的原始 CSV 與模型。資料授權只有使用者聲明（本競賽專題範圍），沒有標準開放授權；競賽以外的再散布或商業使用請先向資料提供者確認。
 
 ## 結案文件（v1.1.0 最終交付）
 

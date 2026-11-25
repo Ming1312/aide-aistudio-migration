@@ -4,7 +4,7 @@
 
 | 項目 | 內容 |
 |---|---|
-| Repository | https://github.com/Ming1312/aide-aistudio-migration（**private**，不得改為公開，見 07） |
+| Repository | https://github.com/Ming1312/aide-aistudio-migration（**public**，2026-11-25 起公開；含原始 CSV 與模型，授權範圍見 07） |
 | 結案分支 | `release/aide-v1.1.0`：https://github.com/Ming1312/aide-aistudio-migration/tree/release/aide-v1.1.0 |
 | App／引擎程式碼版本 | commit `32934f1c2016dce0b065e4c3a8fccf57c2e9fcec`（2026-11-25；之後的 commit 只新增文件） |
 | 結案文件版本 | 該分支最新 commit（`git log -1 release/aide-v1.1.0`；確切 SHA 隨交付訊息提供） |
@@ -50,7 +50,7 @@
 
 ## 5　剩餘限制（摘要，完整見 07）
 
-沒有獨立盲測，結果為探索性回測；沒有故障標籤，異常為候選事件；THI 84 為候選門檻；即時資料流為合成；F12 未修正（非阻擋）；資料授權僅有使用者聲明，repo 須維持 private；Quick Tunnel 僅供展示與測試。
+沒有獨立盲測，結果為探索性回測；沒有故障標籤，異常為候選事件；THI 84 為候選門檻；即時資料流為合成；F12 未修正（非阻擋）；資料授權僅有使用者聲明（本競賽專題範圍），而 repo 已公開；Quick Tunnel 僅供展示與測試。
 
 ## 6　安全收尾狀態
 
