@@ -12,11 +12,27 @@
 
 > 這個 repo 含七場域的真實資料（使用者已聲明可公開展示；來源與使用聲明見 `public/data/real_public/DATA_USE_STATEMENT.md`）與合成展示資料，兩者分開標示。**目前是 private repository，未經確認不要改成公開。**
 
+## 結案文件（v1.1.0 最終交付）
+
+| 文件 | 內容 |
+|---|---|
+| [`docs/final/01_PROJECT_SUMMARY.md`](docs/final/01_PROJECT_SUMMARY.md) | **成果說明**（給指導老師與評審）：動機、問題定義、創新性、方法、結果、功能、價值、限制 |
+| [`docs/final/02_ARCHITECTURE_AND_DATAFLOW.md`](docs/final/02_ARCHITECTURE_AND_DATAFLOW.md) | 系統架構與資料流、安全設計 |
+| [`docs/final/03_MODELS_RESEARCH_AND_VALIDATION.md`](docs/final/03_MODELS_RESEARCH_AND_VALIDATION.md) | AI 模型、研究方法與驗證結果（含出處） |
+| [`docs/final/04_DOMAIN_FEATURES_AND_USAGE.md`](docs/final/04_DOMAIN_FEATURES_AND_USAGE.md) | 七場域功能與使用說明 |
+| [`docs/final/05_OPERATIONS_MANUAL.md`](docs/final/05_OPERATIONS_MANUAL.md) | 本機啟動、停止、免費 Tunnel、AI Studio 設定手冊 |
+| [`docs/final/06_FINAL_ACCEPTANCE_REPORT.md`](docs/final/06_FINAL_ACCEPTANCE_REPORT.md) | **最終驗收報告**：已完成／已驗證／部分完成／未驗證 |
+| [`docs/final/07_LIMITATIONS_AND_FUTURE_WORK.md`](docs/final/07_LIMITATIONS_AND_FUTURE_WORK.md) | 已知限制與未來發展方向 |
+| [`docs/final/08_DEMO_SCRIPT.md`](docs/final/08_DEMO_SCRIPT.md) | 競賽展示操作腳本 |
+| [`docs/final/00_FINAL_DELIVERABLES.md`](docs/final/00_FINAL_DELIVERABLES.md) | 最終交付清單與檔案位置 |
+
+**一句話現況**：功能已凍結，不再新增功能、模型或部署架構。沒有開放中的阻擋性問題；F12（唯讀部署下管理者寫入顯示誤導訊息）等非阻擋問題與限制如實保留，見驗收報告。
+
 ## 分支
 
 | 分支 | 內容 |
 |---|---|
-| `release/aide-v1.1.0` | **完整最新版**：App（含 F10、F11、F13 修正）、Python 引擎原始碼、Docker 部署設定、CI 驗收腳本、`demo_kit/`、Phase 6.5～6.8 文件 |
+| `release/aide-v1.1.0` | **完整最新版（結案版本）**：App（含 F10、F11、F13 修正）、Python 引擎原始碼、Docker 部署設定、CI 驗收腳本、`demo_kit/`、Phase 6.5～6.8 文件、`docs/final/` 結案文件 |
 | `main` | 較早的遷移包（Phase 6.4 為止），保留未動 |
 | `ci/docker-acceptance` | Phase 6.7 的 Docker／Caddy 隔離驗收（GitHub Actions），保留未動 |
 
@@ -29,7 +45,7 @@ public/data/                     真實資料（real_public）與合成資料（
 engine/                          Python 引擎的「文字原始碼」與部署設定（不含模型與資料，見下）
 ci/                              Docker／Caddy 驗收腳本；inputs/ 內是引擎封包與 App 匯出（SHA-256 固定在 EXPECTED_SHA256）
 demo_kit/                        本機唯讀展示套件（啟動／停止／Tunnel／狀態檢查）
-docs/01…10                       遷移規格；docs/phase6/ 是 Phase 6.6～6.8 的整合與驗收報告、patch
+docs/01…10                       遷移規格；docs/phase6/ 是 Phase 6.6～6.8 的整合與驗收報告、patch；docs/final/ 是結案文件
 .github/workflows/               docker-acceptance（只在 ci/docker-acceptance 分支或手動觸發）
 ```
 
