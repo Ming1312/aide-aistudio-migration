@@ -69,3 +69,59 @@ test("本機問答：指名場域回該場域；全部安全時回安全；不�
   );
   assert.ok(answerLocal("未來 3 小時需要注意什麼？", safe).text.length > 0);
 });
+
+// ---- 引擎即時預測
+import type { LiveForecastResponse, LiveStatusResponse } from "../../contracts/types.ts";
+
+const engineFixture = (v1: number, v3: number, opts: { stale?: boolean; synthetic?: boolean; flags?: string[] } = {}) => {
+  const hist = Array.from({ length: 80 }, (_, i) => ({ time: `2026-11-27 ${String(i % 24).padStart(2, "0")}:00:00`, value: 78 + (i % 3) }));
+  const task = (h: number, v: number) => ({
+    task_id: `羊舍::THI::h${h}`,
+    sensor: "成羊區THI",
+    horizon_h: h,
+    origin: "2026-11-27 08:00:00",
+    target_timestamp: `2026-11-27 ${8 + h}:00:00`,
+    history: hist,
+    models: { HGB: { value: v, refused: null }, persistence: { value: 80, refused: null } },
+  });
+  return {
+    forecast: { dataset_id: "sheep_barn", data_version: "v1", issued_at: null, contains_synthetic: opts.synthetic ?? true, tasks: [task(1, v1), task(3, v3)] } as unknown as LiveForecastResponse,
+    status: {
+      dataset_id: "sheep_barn", data_end: "2026-11-27 08:00:00", mode: "sim", is_stale: opts.stale ?? false,
+      current_version: "v1", latest_source: "synthetic", contains_synthetic: opts.synthetic ?? true, flags: opts.flags ?? [],
+    } as unknown as LiveStatusResponse,
+  };
+};
+
+test("引擎即時：用 HGB 預測與門檻比較；模擬流會標示；沒有區間與機率", () => {
+  const s = computeDomainStatus(input("sheep_barn", { engine: engineFixture(85, 88) }));
+  assert.equal(s.source, "engine");
+  assert.equal(s.synthetic, true);
+  assert.deepEqual(s.horizons.map((h) => h.point), [85, 88]);
+  assert.equal(s.horizons[1].level, "danger");
+  assert.equal(s.level, "danger");
+  assert.equal(s.horizons[0].pCaution, null);
+  assert.equal(s.horizons[0].lower, null);
+  assert.ok(s.history && s.history.length > 24 && s.spark.length > 24);
+  const safe = computeDomainStatus(input("sheep_barn", { engine: engineFixture(80, 81, { synthetic: false }) }));
+  assert.equal(safe.level, "safe");
+  assert.equal(safe.synthetic, false);
+});
+
+test("引擎即時：資料過時或有旗標 → 先確認資料；匯入資料優先於引擎；沒有對應任務時退回預計算", () => {
+  const stale = computeDomainStatus(input("sheep_barn", { engine: engineFixture(80, 81, { stale: true }) }));
+  assert.equal(stale.level, "data");
+  assert.equal(stale.reliability, "unreliable");
+  const flagged = computeDomainStatus(input("sheep_barn", { engine: engineFixture(80, 81, { flags: ["讀值卡住"] }) }));
+  assert.equal(flagged.reliability, "warning");
+  assert.ok(flagged.reliabilityFindings.includes("讀值卡住"));
+
+  const H = 3_600_000;
+  const t0 = Date.parse("2026-08-14T00:00:00");
+  const rows: ParsedCsvRow[] = Array.from({ length: 100 }, (_, i) => ({ timestamp: "x", tsMs: t0 + i * H, values: { "成羊區THI": 80 }, rawCells: [], flagValue: "import" }));
+  assert.equal(computeDomainStatus(input("sheep_barn", { engine: engineFixture(95, 95), liveRows: rows })).source, "import");
+
+  const noTask = engineFixture(80, 81);
+  noTask.forecast.tasks = [];
+  assert.equal(computeDomainStatus(input("sheep_barn", { engine: noTask })).source, "precomputed");
+});

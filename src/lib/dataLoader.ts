@@ -1,3 +1,4 @@
+import type { AdminRole } from "../types/app";
 import type {
   AnomaliesResponse,
   DecisionExplainResponse,
@@ -155,7 +156,7 @@ export async function fetchAdminRole(): Promise<AdminRoleStatus> {
 
 export interface AdminLoginResponse {
   ok: boolean;
-  role: "viewer" | "demo_admin" | "admin";
+  role: AdminRole;
   locked?: boolean;
   remaining?: number;
   remainingTries?: number;

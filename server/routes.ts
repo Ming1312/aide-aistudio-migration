@@ -9,7 +9,8 @@ import type {
   ExplainRequest,
   PrecomputedAnomalies,
 } from "../contracts/types.ts";
-import { AdminGate, DEMO_ACCOUNT, DEMO_PASSWORD } from "../reference/adminAuth.ts";
+import { can } from "../contracts/permissions.ts";
+import { AdminGate, DEMO_ACCOUNT, DEMO_PASSWORD, DEMO_STAFF_ACCOUNT, DEMO_STAFF_PASSWORD } from "../reference/adminAuth.ts";
 import {
   explainDecision,
   ruleBasedExplain,
@@ -169,6 +170,9 @@ export interface ApiRouterOptions {
   adminAccount?: string;
   /** 沒有正式管理者時是否開放展示預設帳號（預設：除非 ADMIN_DEMO_DISABLED=1） */
   adminDemoEnabled?: boolean;
+  /** 正式員工帳號的雜湊（預設環境變數 STAFF_PASSPHRASE_HASH）與名稱（STAFF_ACCOUNT，預設 staff） */
+  staffHash?: string;
+  staffAccount?: string;
   engineBaseUrl?: string;
   engineApiKey?: string;
   engineAdminKey?: string;
@@ -267,6 +271,8 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
     5,
     {
       account: options.adminAccount ?? process.env.ADMIN_ACCOUNT,
+      staffHash: options.staffHash !== undefined ? options.staffHash : process.env.STAFF_PASSPHRASE_HASH,
+      staffAccount: options.staffAccount ?? process.env.STAFF_ACCOUNT,
       demoEnabled:
         options.adminDemoEnabled !== undefined
           ? options.adminDemoEnabled
@@ -557,7 +563,13 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
       role: adminGate.role(sid),
       demo_available: demo,
       // 展示預設帳號是公開值；正式管理者一旦設定就不再提供，也不回傳任何雜湊或金鑰
-      ...(demo ? { demo_hint: { account: DEMO_ACCOUNT, password: DEMO_PASSWORD } } : {}),
+      staff_configured: adminGate.staffConfigured(),
+      ...(demo
+        ? {
+            demo_hint: { account: DEMO_ACCOUNT, password: DEMO_PASSWORD },
+            demo_staff_hint: { account: DEMO_STAFF_ACCOUNT, password: DEMO_STAFF_PASSWORD },
+          }
+        : {}),
     });
   });
 
@@ -570,7 +582,7 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
     const result = adminGate.login(sid, passphrase, account);
     const status = result.ok
       ? 200
-      : !adminGate.configured() && !adminGate.demoAvailable()
+      : !adminGate.configured() && !adminGate.staffConfigured() && !adminGate.demoAvailable()
       ? 403
       : result.locked
       ? 429
@@ -582,8 +594,8 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
   router.get("/admin/status", (req: Request, res: Response) => {
     const sid = getOrCreateSessionId(req, res);
     const role = adminGate.role(sid);
-    if (role === "viewer") {
-      res.status(403).json({ detail: "請先登入管理者或展示管理者" });
+    if (!can(role, "view_admin_status")) {
+      res.status(403).json({ detail: "需要管理員身分" });
       return;
     }
     const { base, key, adminKey } = getEngineConfig();
@@ -594,6 +606,7 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
       engine_admin_key_configured: !!adminKey,
       gemini_configured: !!options.geminiBundle || !!process.env.GEMINI_API_KEY,
       real_admin_configured: adminGate.configured(),
+      staff_configured: adminGate.staffConfigured(),
       demo_account_active: adminGate.demoAvailable(),
       real_account_name: adminGate.configured() ? adminGate.realAccountName() : null,
       can_write_engine: role === "admin",
@@ -828,6 +841,11 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
   // General Gemini explanation
   // 資料匯入中心：由伺服器代為取得公開試算表／CSV 文字（白名單網域；瀏覽器直接取檔被 CORS 擋下時的備援）
   router.get("/import/fetch", async (req: Request, res: Response) => {
+    const importRole = adminGate.role(getOrCreateSessionId(req, res));
+    if (!can(importRole, "import_data")) {
+      res.status(403).json({ detail: "資料匯入需要員工或管理員身分，請先登入" });
+      return;
+    }
     const clientIp = req.ip || req.socket.remoteAddress || "unknown";
     if (!limiter.check(clientIp).allowed) {
       res.status(429).json({ detail: "請求過於頻繁，請稍後再試" });

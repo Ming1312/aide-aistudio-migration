@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { AnomaliesResponse, PrecomputedForecasts, RealCatalog } from "../contracts/types";
+import { can } from "../contracts/permissions";
 import { AdminModal } from "./components/AdminModal";
 import { Layout } from "./components/Layout";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
@@ -13,6 +14,7 @@ import {
 import { mergeRows } from "./lib/liveSeries";
 import { loadJson, saveJson } from "./lib/storage";
 import { computeDomainStatus, type StatusInput, type ThresholdOverrides } from "./lib/status";
+import { useEngine } from "./lib/useEngine";
 import { useImporter } from "./lib/useImporter";
 import { DataPage } from "./pages/DataPage";
 import { DecisionPage } from "./pages/DecisionPage";
@@ -49,7 +51,9 @@ export const App: React.FC = () => {
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [baseRows, setBaseRows] = useState<Record<string, ParsedCsvRow[]>>({});
 
-  const importer = useImporter(catalog);
+  const importer = useImporter(catalog, can(adminRole.role, "import_data"));
+  const datasetIdsKey = useMemo(() => (catalog?.datasets ?? []).map((d) => d.id), [catalog]);
+  const engine = useEngine(datasetIdsKey, datasetIdsKey.length > 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,10 +109,11 @@ export const App: React.FC = () => {
         anomalies: anomaliesMap[ds.id],
         overrides,
         liveRows: imp && imp.length > 0 && base ? mergeRows(base, imp) : null,
+        engine: engine.data[ds.id] ?? null,
       });
     }
     return m;
-  }, [datasets, forecasts, anomaliesMap, overrides, importer.imported, baseRows]);
+  }, [datasets, forecasts, anomaliesMap, overrides, importer.imported, baseRows, engine.data]);
 
   const statuses = useMemo(() => datasets.map((d) => computeDomainStatus(inputs.get(d.id)!)), [datasets, inputs]);
 
@@ -151,13 +156,24 @@ export const App: React.FC = () => {
   const renderPage = () => {
     switch (activePage) {
       case "overview":
-        return <OverviewPage statuses={statuses} onOpenDecision={openDecision} onOpenData={openData} />;
+        return <OverviewPage
+            statuses={statuses}
+            engine={{ connected: engine.connected, synthetic: engine.synthetic, lastAt: engine.lastAt }}
+            onOpenDecision={openDecision}
+            onOpenData={openData}
+          />;
       case "data":
         return <DataPage dataset={activeDataset} forecasts={forecasts} importedRows={importer.imported[activeDataset.id] ?? []} />;
       case "decision":
-        return <DecisionPage status={activeStatus} input={inputs.get(activeDataset.id)!} onOpenData={() => openData(activeDataset.id)} />;
+        return <DecisionPage
+            status={activeStatus}
+            input={inputs.get(activeDataset.id)!}
+            onOpenData={() => openData(activeDataset.id)}
+            canRecord={can(adminRole.role, "record_decision")}
+            onLogin={() => setAdminModalOpen(true)}
+          />;
       case "import":
-        return <ImportPage datasets={datasets} datasetId={activeDataset.id} importer={importer} />;
+        return <ImportPage datasets={datasets} datasetId={activeDataset.id} importer={importer} canImport={can(adminRole.role, "import_data")} onLogin={() => setAdminModalOpen(true)} />;
       case "settings":
         return (
           <SettingsPage
@@ -168,6 +184,8 @@ export const App: React.FC = () => {
             onChangeOverrides={changeOverrides}
             adminRole={adminRole}
             onOpenAdmin={() => setAdminModalOpen(true)}
+            canEditThresholds={can(adminRole.role, "edit_thresholds")}
+            engine={can(adminRole.role, "view_engine") ? engine : null}
           />
         );
     }

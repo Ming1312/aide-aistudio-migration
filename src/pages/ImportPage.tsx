@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CheckCircle2, Download, FileUp, Link2, RefreshCw, Table2, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Download, FileUp, Link2, Lock, RefreshCw, Table2, Trash2, XCircle } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
 import { resolveSourceUrl, type SourceKind } from "../lib/importSources";
 import type { Importer, SourceStatus } from "../lib/useImporter";
@@ -9,6 +9,8 @@ interface Props {
   datasets: RealDataset[];
   datasetId: string;
   importer: Importer;
+  canImport: boolean;
+  onLogin: () => void;
 }
 
 type Mode = "sheet" | "url" | "file" | "paste";
@@ -56,7 +58,7 @@ const StatusLine: React.FC<{ st: SourceStatus | null }> = ({ st }) => {
   );
 };
 
-export const ImportPage: React.FC<Props> = ({ datasets, datasetId, importer }) => {
+export const ImportPage: React.FC<Props> = ({ datasets, datasetId, importer, canImport, onLogin }) => {
   const [mode, setMode] = useState<Mode>("sheet");
   const [target, setTarget] = useState(datasetId);
   const [url, setUrl] = useState("");
@@ -100,6 +102,20 @@ export const ImportPage: React.FC<Props> = ({ datasets, datasetId, importer }) =
   };
 
   const importedList = Object.entries(importer.imported).filter(([, r]) => r.length > 0);
+
+  if (!canImport) {
+    return (
+      <Card>
+        <div className="flex flex-wrap items-center gap-3" data-testid="import-locked">
+          <Lock className="h-5 w-5 text-slate-400" />
+          <div className="text-sm text-slate-700">資料匯入需要員工或管理員身分</div>
+          <button type="button" onClick={onLogin} className="ml-auto px-4 py-1.5 rounded-md bg-[#0B63CE] text-white text-sm font-semibold">
+            登入
+          </button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-3">

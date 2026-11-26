@@ -38,7 +38,7 @@ export interface ImportLogEntry {
 
 const SOURCES_KEY = "aide.import.sources.v1";
 
-export function useImporter(catalog: RealCatalog | null) {
+export function useImporter(catalog: RealCatalog | null, pollEnabled = true) {
   const [sources, setSources] = useState<ImportSource[]>(() => loadJson<ImportSource[]>(SOURCES_KEY, []));
   const [imported, setImported] = useState<Record<string, ParsedCsvRow[]>>({});
   const [status, setStatus] = useState<Record<string, SourceStatus>>({});
@@ -146,11 +146,12 @@ export function useImporter(catalog: RealCatalog | null) {
 
   // 定時輪詢：每個設定了間隔的來源一個計時器；輪詢到才抓，頁面開著才會更新
   useEffect(() => {
+    if (!pollEnabled) return;
     const timers = sources
       .filter((s) => s.everyMin > 0)
       .map((s) => window.setInterval(() => void runSource(s), s.everyMin * 60_000));
     return () => timers.forEach((t) => window.clearInterval(t));
-  }, [sources, runSource]);
+  }, [sources, runSource, pollEnabled]);
 
   return { sources, imported, status, log, ingestText, runSource, addSource, updateSource, removeSource, clearImported };
 }

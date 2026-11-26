@@ -1319,12 +1319,64 @@ test("F12：引擎因沒有管理金鑰而停用寫入（403 寫入功能停用�
   );
 });
 
-test("GET /api/import/fetch：缺網址 400；非白名單／內網網址 400；不對外連線", async () => {
+test("GET /api/import/fetch：訪客 403；員工登入後缺網址／非白名單／內網網址 400（不對外連線）", async () => {
   await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
-    assert.equal((await fetch(`${base}/api/import/fetch`)).status, 400);
+    const viewer = await fetch(`${base}/api/import/fetch?url=${encodeURIComponent("https://docs.google.com/x")}`);
+    assert.equal(viewer.status, 403);
+
+    const login = await fetch(`${base}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account: "staff", passphrase: "aide-staff" }),
+    });
+    assert.equal(login.status, 200);
+    assert.equal(((await login.json()) as { role: string }).role, "staff");
+    const cookie = (login.headers.get("set-cookie") || "").split(";")[0];
+    const get = (q: string) => fetch(`${base}/api/import/fetch${q}`, { headers: { Cookie: cookie } });
+    assert.equal((await get("")).status, 400);
     for (const bad of ["https://127.0.0.1/x", "http://docs.google.com/x", "https://evil.example.com/x.csv"]) {
-      const r = await fetch(`${base}/api/import/fetch?url=${encodeURIComponent(bad)}`);
-      assert.equal(r.status, 400, bad);
+      assert.equal((await get(`?url=${encodeURIComponent(bad)}`)).status, 400, bad);
     }
+  });
+});
+
+test("三個角色：訪客／員工看不到管理狀態；員工不能寫引擎；展示帳號提示只在沒有正式帳號時出現", async () => {
+  await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
+    const roleRes = (await (await fetch(`${base}/api/admin/role`)).json()) as {
+      role: string; demo_hint?: { account: string }; demo_staff_hint?: { account: string }; staff_configured: boolean;
+    };
+    assert.equal(roleRes.role, "viewer");
+    assert.equal(roleRes.demo_hint?.account, "demo");
+    assert.equal(roleRes.demo_staff_hint?.account, "staff");
+
+    const login = await fetch(`${base}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account: "staff", passphrase: "aide-staff" }),
+    });
+    const cookie = (login.headers.get("set-cookie") || "").split(";")[0];
+    assert.equal((await fetch(`${base}/api/admin/status`, { headers: { Cookie: cookie } })).status, 403);
+    const write = await fetch(`${base}/api/live/sheep_barn/recompute`, { method: "POST", headers: { Cookie: cookie, "Content-Type": "application/json" }, body: "{}" });
+    assert.equal(write.status, 403);
+
+    const demo = await fetch(`${base}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account: "demo", passphrase: "aide-demo" }),
+    });
+    const dc = (demo.headers.get("set-cookie") || "").split(";")[0];
+    assert.equal((await fetch(`${base}/api/admin/status`, { headers: { Cookie: dc } })).status, 200);
+  });
+
+  const staffHash = makeHash("staff-pass-long-1");
+  await withServer({ engineBaseUrl: "", geminiBundle: null, staffHash }, async (base) => {
+    const r = (await (await fetch(`${base}/api/admin/role`)).json()) as { demo_hint?: unknown; demo_staff_hint?: unknown; staff_configured: boolean };
+    assert.equal(r.staff_configured, true);
+    assert.equal(r.demo_hint, undefined);
+    assert.equal(r.demo_staff_hint, undefined);
+    const bad = await fetch(`${base}/api/admin/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: "staff", passphrase: "aide-staff" }) });
+    assert.equal(bad.status, 401);
+    const good = await fetch(`${base}/api/admin/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: "staff", passphrase: "staff-pass-long-1" }) });
+    assert.equal(good.status, 200);
   });
 });

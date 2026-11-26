@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { ChevronRight, Lock, Unlock } from "lucide-react";
+import { ChevronRight, Lock, RefreshCw, Unlock } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
 import { ASSUMED_BADGE, CANDIDATE_POLICIES } from "../lib/candidateRisk";
 import { loadDataUseStatement } from "../lib/dataLoader";
 import type { ThresholdOverrides } from "../lib/status";
+import type { EngineState } from "../lib/useEngine";
 import { ADMIN_ROLE_LABEL, type AdminRoleStatus } from "../types/app";
 import { Card } from "../components/ui";
 
@@ -15,6 +16,9 @@ interface Props {
   onChangeOverrides: (next: ThresholdOverrides) => void;
   adminRole: AdminRoleStatus;
   onOpenAdmin: () => void;
+  canEditThresholds: boolean;
+  /** null = 這個角色看不到引擎狀態 */
+  engine: EngineState | null;
 }
 
 const Fold: React.FC<{ title: string; children: React.ReactNode; onOpen?: () => void }> = ({ title, children, onOpen }) => (
@@ -38,6 +42,8 @@ export const SettingsPage: React.FC<Props> = ({
   onChangeOverrides,
   adminRole,
   onOpenAdmin,
+  canEditThresholds,
+  engine,
 }) => {
   const [statement, setStatement] = useState<string | null>(null);
   const [wantStatement, setWantStatement] = useState(false);
@@ -85,12 +91,56 @@ export const SettingsPage: React.FC<Props> = ({
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm text-slate-800 hover:bg-slate-50"
           >
             {adminRole.role === "viewer" ? <Lock className="h-4 w-4 text-slate-400" /> : <Unlock className="h-4 w-4 text-emerald-700" />}
-            管理者：{ADMIN_ROLE_LABEL[adminRole.role].split("（")[0]}
+            角色：{ADMIN_ROLE_LABEL[adminRole.role]}
           </button>
         </div>
       </Card>
 
-      <Card title="風險門檻" right={<span className="text-[10px] text-slate-500">{ASSUMED_BADGE}</span>}>
+      {engine && (
+        <Card
+          title="引擎連線"
+          right={
+            <button
+              type="button"
+              onClick={engine.refresh}
+              disabled={engine.busy}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0B63CE] hover:underline disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${engine.busy ? "animate-spin" : ""}`} />
+              重新檢查
+            </button>
+          }
+        >
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm" data-testid="engine-card">
+            <div>
+              <dt className="text-xs text-slate-500">狀態</dt>
+              <dd className={`font-semibold ${engine.connected ? "text-emerald-700" : "text-slate-600"}`}>
+                {!engine.checked ? "檢查中…" : engine.connected ? "已連線" : "未連線"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">資料來源</dt>
+              <dd className="text-slate-900">{engine.connected ? (engine.synthetic ? "引擎模擬資料流" : "引擎即時資料") : "離線預計算"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">版本／模式</dt>
+              <dd className="text-slate-900">
+                {engine.version ?? "—"}
+                {engine.connected && <span className="text-slate-500">・{engine.readOnly ? "唯讀" : "可寫"}</span>}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">最後檢查</dt>
+              <dd className="text-slate-900">{engine.lastAt ?? "—"}</dd>
+            </div>
+          </dl>
+          {!engine.connected && engine.checked && (
+            <div className="mt-2 text-xs text-slate-500">{engine.error ?? "尚未設定引擎，使用離線預計算結果"}（做法見下方「連接電腦上的引擎」）</div>
+          )}
+        </Card>
+      )}
+
+      <Card title="風險門檻" right={<span className="text-[10px] text-slate-500">{canEditThresholds ? ASSUMED_BADGE : "修改需要管理員身分"}</span>}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm" data-testid="threshold-table">
             <thead>
@@ -127,12 +177,13 @@ export const SettingsPage: React.FC<Props> = ({
                           step="any"
                           aria-label={`${d.display_name} ${f === "caution" ? "注意" : "警戒"}`}
                           value={o ? o[f] : p[f]}
+                          disabled={!canEditThresholds}
                           onChange={(e) => setThreshold(d.id, f, e.target.value)}
-                          className={`w-20 rounded border px-2 py-1 text-sm tabular-nums ${o ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300"}`}
+                          className={`w-20 rounded border px-2 py-1 text-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-500 ${o ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300"}`}
                         />
                       </td>
                     ))}
-                    <td className="py-1.5">{o && <button type="button" onClick={() => reset(d.id)} className="text-xs text-slate-500 hover:underline">重設</button>}</td>
+                    <td className="py-1.5">{o && canEditThresholds && <button type="button" onClick={() => reset(d.id)} className="text-xs text-slate-500 hover:underline">重設</button>}</td>
                   </tr>
                 );
               })}
@@ -157,6 +208,12 @@ export const SettingsPage: React.FC<Props> = ({
           </Fold>
           <Fold title="感測器可信度">
             <p>連續 6 小時讀值完全相同，或前 24 小時內偵測到卡值、漂移、斷線候選事件，就標為可信度不足。候選事件需人工確認，不是故障判定。</p>
+          </Fold>
+          <Fold title="連接電腦上的引擎">
+            <p>1. 在你的電腦啟動引擎（需要 Docker）：<code className="text-xs bg-slate-100 px-1 rounded">bash demo_kit/start_local.sh</code></p>
+            <p>2. 用這個指令啟動本 App，它會自動讀取金鑰（不顯示）並連到 127.0.0.1:8088：<code className="text-xs bg-slate-100 px-1 rounded">bash scripts/dev_with_engine.sh</code></p>
+            <p>3. 回到這裡按「重新檢查」。連上後，總覽與決策改用引擎的即時預測，每 30 秒更新；引擎沒開時自動回到離線預計算。</p>
+            <p>引擎內建的資料流是模擬（合成）資料，畫面會標示。App 只讀取、不寫入引擎。</p>
           </Fold>
           <Fold title="匯入資料">
             <p>欄名需與場域感測器相同（或原始表頭）；第一欄為時間。同一時間的新資料會覆蓋舊資料，並以小時平均處理。至少 72 小時歷史才會產生預測。</p>

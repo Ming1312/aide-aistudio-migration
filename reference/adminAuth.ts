@@ -20,7 +20,7 @@ export function makeHash(passphrase: string, iters = 200_000): string {
   return `pbkdf2$${iters}$${salt.toString("hex")}$${pbkdf2Sync(Buffer.from(passphrase, "utf8"), salt, iters, 32, "sha256").toString("hex")}`;
 }
 
-export type Role = "viewer" | "demo_admin" | "admin";
+export type Role = "viewer" | "staff" | "demo_admin" | "admin";
 export interface LoginResult { ok: boolean; role: Role; remaining: number; locked: boolean; message: string }
 
 /**
@@ -33,12 +33,19 @@ export interface LoginResult { ok: boolean; role: Role; remaining: number; locke
 export const DEMO_ACCOUNT = "demo";
 export const DEMO_PASSWORD = "aide-demo";
 export const DEFAULT_REAL_ACCOUNT = "admin";
+/** 展示用的員工帳號（同樣是公開值；只有員工的權限，沒有管理權限） */
+export const DEMO_STAFF_ACCOUNT = "staff";
+export const DEMO_STAFF_PASSWORD = "aide-staff";
+export const DEFAULT_STAFF_ACCOUNT = "staff";
 
 export interface AdminGateOptions {
   /** 正式管理者的帳號名稱（預設 admin） */
   account?: string;
-  /** 是否在「沒有設定正式管理者」時開放展示預設帳號 */
+  /** 是否在「沒有設定任何正式帳號」時開放展示預設帳號 */
   demoEnabled?: boolean;
+  /** 正式員工帳號的雜湊（STAFF_PASSPHRASE_HASH）與名稱（預設 staff） */
+  staffHash?: string;
+  staffAccount?: string;
 }
 
 function sameText(a: string, b: string): boolean {
@@ -56,16 +63,23 @@ export class AdminGate {
   private readonly maxTries: number;
   private readonly account: string;
   private readonly demoEnabled: boolean;
+  private readonly staffHash: string | undefined;
+  private readonly staffAccount: string;
   constructor(hash: string | undefined, maxTries = 5, opts: AdminGateOptions = {}) {
     this.hash = hash;
     this.maxTries = maxTries;
     this.account = normAccount(opts.account) || DEFAULT_REAL_ACCOUNT;
     this.demoEnabled = opts.demoEnabled === true;
+    this.staffHash = opts.staffHash || undefined;
+    this.staffAccount = normAccount(opts.staffAccount) || DEFAULT_STAFF_ACCOUNT;
   }
+  /** 是否設定了正式員工帳號（雜湊） */
+  staffConfigured(): boolean { return !!this.staffHash; }
+  realStaffAccountName(): string { return this.staffAccount; }
   /** 是否設定了正式管理者（雜湊） */
   configured(): boolean { return !!this.hash; }
-  /** 展示預設帳號目前是否可用（沒有正式管理者且未被停用） */
-  demoAvailable(): boolean { return !this.hash && this.demoEnabled; }
+  /** 展示預設帳號（demo、staff）目前是否可用：沒有設定任何正式帳號（管理者或員工）且未被停用 */
+  demoAvailable(): boolean { return !this.hash && !this.staffHash && this.demoEnabled; }
   realAccountName(): string { return this.account; }
   role(sessionId: string): Role { return this.sessions.get(sessionId) ?? "viewer"; }
   private fail(sessionId: string, used: number): LoginResult {
@@ -78,21 +92,22 @@ export class AdminGate {
    * （與舊版「只輸入密碼」相容）。
    */
   login(sessionId: string, passphrase: string, account?: string): LoginResult {
-    if (!this.hash && !this.demoEnabled) return { ok: false, role: "viewer", remaining: 0, locked: false, message: "尚未設定管理者；所有人唯讀" };
+    if (!this.hash && !this.staffHash && !this.demoEnabled) return { ok: false, role: "viewer", remaining: 0, locked: false, message: "尚未設定任何帳號；所有人以訪客身分唯讀" };
     const used = this.fails.get(sessionId) ?? 0;
     if (used >= this.maxTries) return { ok: false, role: "viewer", remaining: 0, locked: true, message: "錯誤次數過多，這個連線已鎖定；重新整理頁面後再試" };
     const acct = account === undefined || normAccount(account) === "" ? undefined : normAccount(account);
-    if (this.hash) {
-      if ((acct === undefined || acct === this.account) && verifyHash(passphrase, this.hash)) {
-        this.sessions.set(sessionId, "admin"); this.fails.delete(sessionId);
-        return { ok: true, role: "admin", remaining: this.maxTries, locked: false, message: "已解鎖管理者" };
-      }
-      return this.fail(sessionId, used);
-    }
-    // 沒有正式管理者：只有展示預設帳號
-    if ((acct === undefined || acct === DEMO_ACCOUNT) && passphrase && sameText(passphrase, DEMO_PASSWORD)) {
-      this.sessions.set(sessionId, "demo_admin"); this.fails.delete(sessionId);
-      return { ok: true, role: "demo_admin", remaining: this.maxTries, locked: false, message: "已以展示管理者登入（不能寫入引擎）" };
+    const ok = (role: Role, message: string): LoginResult => {
+      this.sessions.set(sessionId, role); this.fails.delete(sessionId);
+      return { ok: true, role, remaining: this.maxTries, locked: false, message };
+    };
+    // 正式管理者
+    if (this.hash && (acct === undefined || acct === this.account) && verifyHash(passphrase, this.hash)) return ok("admin", "已登入管理員");
+    // 正式員工
+    if (this.staffHash && (acct === undefined || acct === this.staffAccount) && verifyHash(passphrase, this.staffHash)) return ok("staff", "已登入員工");
+    // 展示預設帳號：只有在沒有任何正式帳號時
+    if (this.demoAvailable() && passphrase) {
+      if ((acct === undefined || acct === DEMO_ACCOUNT) && sameText(passphrase, DEMO_PASSWORD)) return ok("demo_admin", "已以展示管理員登入（不能寫入引擎）");
+      if ((acct === undefined || acct === DEMO_STAFF_ACCOUNT) && sameText(passphrase, DEMO_STAFF_PASSWORD)) return ok("staff", "已以展示員工登入");
     }
     return this.fail(sessionId, used);
   }

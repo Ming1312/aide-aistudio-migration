@@ -7,6 +7,7 @@ import { Card, SAFETY_STYLE, SafetyBadge, Sparkline } from "../components/ui";
 
 interface Props {
   statuses: DomainStatus[];
+  engine: { connected: boolean; synthetic: boolean; lastAt: string | null };
   onOpenDecision: (datasetId: string) => void;
   onOpenData: (datasetId: string) => void;
 }
@@ -20,7 +21,7 @@ interface QA {
   focusId: string | null;
 }
 
-export const OverviewPage: React.FC<Props> = ({ statuses, onOpenDecision, onOpenData }) => {
+export const OverviewPage: React.FC<Props> = ({ statuses, engine, onOpenDecision, onOpenData }) => {
   const overall = overallLevel(statuses);
   const withModel = statuses.filter((s) => s.hasModel);
   const counts = (["danger", "data", "caution", "safe"] as Safety[]).map((l) => ({
@@ -78,6 +79,11 @@ export const OverviewPage: React.FC<Props> = ({ statuses, onOpenDecision, onOpen
                   </span>
                 ))}
               {asOf && <span className="opacity-70">資料截至 {asOf.slice(0, 16)}</span>}
+              {engine.connected && (
+                <span data-testid="engine-chip" className="font-semibold">
+                  ● 引擎即時{engine.synthetic ? "（模擬資料流）" : ""}・{engine.lastAt}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -111,7 +117,7 @@ export const OverviewPage: React.FC<Props> = ({ statuses, onOpenDecision, onOpen
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-900 truncate">{s.name.split("（")[0]}</div>
                   <div className="text-[11px] text-slate-500 truncate">
-                    {s.hasModel ? `${s.policy?.sensor} · ${s.source === "import" ? "匯入資料" : "預計算"}` : s.noModelReason}
+                    {s.hasModel ? `${s.policy?.sensor} · ${s.source === "import" ? "匯入資料" : s.source === "engine" ? (s.synthetic ? "引擎・模擬流" : "引擎即時") : "預計算"}` : s.noModelReason}
                   </div>
                 </div>
                 <SafetyBadge level={s.level} />

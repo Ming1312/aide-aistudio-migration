@@ -1,3 +1,4 @@
+import { ROLE_NAME, type Role } from "../../contracts/permissions";
 import type {
   AnomaliesResponse,
   DataKind,
@@ -29,7 +30,7 @@ export interface ApiHealthStatus {
   live_sim_enabled?: boolean;
 }
 
-export type AdminRole = "viewer" | "demo_admin" | "admin";
+export type AdminRole = Role;
 
 export interface AdminRoleStatus {
   /** 是否設定了正式管理者（ADMIN_PASSPHRASE_HASH） */
@@ -38,6 +39,8 @@ export interface AdminRoleStatus {
   /** 沒有正式管理者且未被停用時，伺服器開放公開的展示預設帳號 */
   demo_available?: boolean;
   demo_hint?: { account: string; password: string };
+  demo_staff_hint?: { account: string; password: string };
+  staff_configured?: boolean;
 }
 
 /** GET /api/admin/status：只有「是否設定」的布林值，沒有任何值 */
@@ -48,16 +51,13 @@ export interface AdminStatusInfo {
   engine_admin_key_configured: boolean;
   gemini_configured: boolean;
   real_admin_configured: boolean;
+  staff_configured?: boolean;
   demo_account_active: boolean;
   real_account_name: string | null;
   can_write_engine: boolean;
 }
 
-export const ADMIN_ROLE_LABEL: Record<AdminRole, string> = {
-  viewer: "訪客（唯讀）",
-  demo_admin: "展示管理者（不能寫入引擎）",
-  admin: "管理者",
-};
+export const ADMIN_ROLE_LABEL: Record<AdminRole, string> = ROLE_NAME;
 
 export interface ParsedCsvRow {
   timestamp: string;

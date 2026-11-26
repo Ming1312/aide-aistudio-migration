@@ -1,7 +1,7 @@
 import React from "react";
 import { BarChart3, Gauge, LayoutDashboard, Lock, Settings, ShieldCheck, Unlock, UploadCloud } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
-import type { AdminRoleStatus, PageId } from "../types/app";
+import { ADMIN_ROLE_LABEL, type AdminRoleStatus, type PageId } from "../types/app";
 
 export const NAV_ITEMS: Array<{ id: PageId; label: string; icon: React.ReactNode; needsDomain: boolean }> = [
   { id: "overview", label: "總覽", icon: <LayoutDashboard className="h-5 w-5" />, needsDomain: false },
@@ -111,11 +111,13 @@ export const Layout: React.FC<LayoutProps> = ({
                   ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                   : adminRole.role === "demo_admin"
                     ? "border-violet-300 bg-violet-50 text-violet-800"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    : adminRole.role === "staff"
+                      ? "border-sky-300 bg-sky-50 text-sky-800"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               {adminRole.role === "viewer" ? <Lock className="h-3.5 w-3.5 text-slate-400" /> : <Unlock className="h-3.5 w-3.5" />}
-              {adminRole.role === "admin" ? "管理者" : adminRole.role === "demo_admin" ? "展示管理者" : "唯讀"}
+              {ADMIN_ROLE_LABEL[adminRole.role]}
             </button>
           </div>
         </header>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Lock, Sparkles } from "lucide-react";
 import {
   Area,
   CartesianGrid,
@@ -22,6 +22,8 @@ interface Props {
   status: DomainStatus;
   input: StatusInput;
   onOpenData: () => void;
+  canRecord: boolean;
+  onLogin: () => void;
 }
 
 interface LogEntry {
@@ -45,7 +47,7 @@ interface Row {
   band?: [number, number] | null;
 }
 
-export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData }) => {
+export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData, canRecord, onLogin }) => {
   const [ai, setAi] = useState<AiResult | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [chosen, setChosen] = useState<string[]>([]);
@@ -99,6 +101,13 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData }) => 
   // 圖：最近 72 小時觀測 ＋ 1／3 小時預測（含 90% 區間）
   const rows = useMemo<Row[]>(() => {
     if (!policy) return [];
+    if (status.source === "engine" && status.history && status.history.length > 0) {
+      const eo: Row[] = status.history.map((p) => ({ label: hhmm(p.t), obs: p.v }));
+      const last = eo[eo.length - 1];
+      if (last) last.fc = last.obs ?? null;
+      for (const h of status.horizons) eo.push({ label: hhmm(h.target), fc: h.point, band: null });
+      return eo;
+    }
     const t1 = taskFor(input, policy, 1).task;
     if (!t1) return [];
     const pts = t1.points.slice(-72);
@@ -113,10 +122,10 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData }) => 
       });
     }
     return out;
-  }, [policy, input, status.horizons]);
+  }, [policy, input, status.horizons, status.source, status.history]);
 
   const save = () => {
-    if (chosen.length === 0) return;
+    if (!canRecord || chosen.length === 0) return;
     const entry: LogEntry = {
       at: new Date().toLocaleString("zh-TW", { hour12: false }),
       datasetId: status.datasetId,
@@ -176,7 +185,7 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData }) => 
             AI 分析
           </span>
         }
-        right={<span className="text-[10px] text-slate-500">{aiBusy ? "分析中…" : ai ? "Gemini" : "規則式"}</span>}
+        right={<span className="text-[10px] text-slate-500">{aiBusy ? "分析中…" : ai ? "Gemini" : "規則式"}{status.source === "engine" ? (status.synthetic ? " · 引擎模擬流" : " · 引擎即時") : ""}</span>}
       >
         <ul className="space-y-1.5 text-sm text-slate-800" data-testid="ai-analysis">
           {aiBusy ? <li className="h-4 w-2/3 bg-slate-100 rounded animate-pulse" /> : analysis.map((l, i) => <li key={i}>• {l}</li>)}
@@ -230,6 +239,7 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData }) => 
             );
           })}
         </div>
+        {canRecord ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <input
             value={note}
@@ -248,6 +258,15 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData }) => 
             記錄決策
           </button>
         </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500" data-testid="record-locked">
+            <Lock className="h-3.5 w-3.5" />
+            記錄決策需要員工或管理員身分
+            <button type="button" onClick={onLogin} className="font-semibold text-[#0B63CE] hover:underline">
+              登入
+            </button>
+          </div>
+        )}
         {myLog.length > 0 && (
           <ul className="mt-3 pt-3 border-t border-slate-100 space-y-1 text-xs text-slate-600" data-testid="decision-log">
             {myLog.map((l, i) => (

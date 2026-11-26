@@ -74,3 +74,45 @@ test("一旦設定正式管理者，展示預設帳號自動停用；正式帳�
   assert.equal(g.login("d", "test-only-passphrase-123", " boss ").role, "admin"); // 不分大小寫、去空白
   assert.equal(g.login("e", "test-only-passphrase-123").role, "admin");        // 省略帳號相容舊版
 });
+
+// ---- 員工角色與權限表
+import { DEMO_STAFF_ACCOUNT, DEMO_STAFF_PASSWORD } from "./adminAuth.ts";
+import { can } from "../contracts/permissions.ts";
+
+test("展示員工帳號：沒有任何正式帳號時可登入，角色是 staff；admin 與 staff 互不冒用", () => {
+  const g = new AdminGate(undefined, 5, { demoEnabled: true });
+  const r = g.login("s", DEMO_STAFF_PASSWORD, DEMO_STAFF_ACCOUNT);
+  assert.equal(r.role, "staff");
+  assert.equal(g.login("t", DEMO_STAFF_PASSWORD, DEMO_ACCOUNT).ok, false); // 帳號與密碼配錯
+  assert.equal(g.login("u", DEMO_PASSWORD, DEMO_STAFF_ACCOUNT).ok, false);
+  assert.equal(g.login("v", DEMO_STAFF_PASSWORD).role, "staff"); // 只輸入密碼也可
+});
+
+test("正式員工：設定 STAFF 雜湊後，展示帳號全部停用；員工不能變成管理員", () => {
+  const staffHash = makeHash("staff-long-passphrase-1");
+  const g = new AdminGate(undefined, 5, { demoEnabled: true, staffHash });
+  assert.equal(g.demoAvailable(), false);
+  assert.equal(g.login("a", DEMO_STAFF_PASSWORD, DEMO_STAFF_ACCOUNT).ok, false);
+  assert.equal(g.login("b", DEMO_PASSWORD, DEMO_ACCOUNT).ok, false);
+  const r = g.login("c", "staff-long-passphrase-1", "STAFF");
+  assert.equal(r.role, "staff");
+  assert.equal(g.role("c"), "staff");
+
+  const both = new AdminGate(KAT, 5, { demoEnabled: true, staffHash, staffAccount: "worker" });
+  assert.equal(both.login("d", "staff-long-passphrase-1", "worker").role, "staff");
+  assert.equal(both.login("e", "staff-long-passphrase-1", "admin").ok, false); // 員工密碼不能登入管理員帳號
+  assert.equal(both.login("f", "test-only-passphrase-123", "admin").role, "admin");
+});
+
+test("權限表：訪客只能看；員工可匯入與記錄；門檻與管理狀態屬於管理員；只有正式管理員能寫入引擎", () => {
+  assert.equal(can("viewer", "import_data"), false);
+  assert.equal(can("viewer", "record_decision"), false);
+  assert.equal(can("staff", "import_data"), true);
+  assert.equal(can("staff", "record_decision"), true);
+  assert.equal(can("staff", "edit_thresholds"), false);
+  assert.equal(can("staff", "view_admin_status"), false);
+  assert.equal(can("staff", "engine_write"), false);
+  assert.equal(can("demo_admin", "edit_thresholds"), true);
+  assert.equal(can("demo_admin", "engine_write"), false);
+  assert.equal(can("admin", "engine_write"), true);
+});
