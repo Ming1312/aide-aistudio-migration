@@ -2,8 +2,8 @@ import type {
   ModelKey,
   PrecomputedForecastTask,
 } from "../../contracts/types";
-import { MODEL_ORDER } from "../../contracts/types";
-import { currentValueAt, pointValue } from "./candidateRisk";
+import { MODEL_ORDER } from "../../contracts/types.ts";
+import { currentValueAt, pointValue } from "./candidateRisk.ts";
 
 /**
  * 展示：預先準備好的資料＋模擬新資料匯入。
