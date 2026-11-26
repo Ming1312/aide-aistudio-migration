@@ -12,34 +12,7 @@ import type {
   RealCatalog,
 } from "../../contracts/types";
 
-export type PageId =
-  // 日常使用 (Tier 1)
-  | "overview"
-  | "domain_home"
-  | "live_forecast"
-  | "decision_support"
-  | "explorer"
-  | "model_lifecycle"
-  // 羊舍決策 (Tier 2 — 只在羊舍顯示)
-  | "decision_risk"
-  | "decision_actions"
-  | "decision_diagnosis"
-  | "decision_forecast"
-  | "decision_replay"
-  // 進階研究 (Tier 3)
-  | "catalog"
-  | "provenance"
-  | "guide"
-  | "ai_overview"
-  | "decision_guide"
-  | "model_performance"
-  | "team_review";
-
-export interface NavItem {
-  id: PageId;
-  label: string;
-  tier: "daily" | "decision" | "advanced";
-}
+export type PageId = "overview" | "data" | "decision" | "import" | "settings";
 
 export interface ApiHealthStatus {
   ok: boolean;

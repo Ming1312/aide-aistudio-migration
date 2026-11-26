@@ -1,569 +1,221 @@
-import React, { useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  HelpCircle,
-  Play,
-  RefreshCw,
-} from "lucide-react";
-import type {
-  AnomaliesResponse,
-  RealDataset,
-} from "../../contracts/types";
-import { fetchOverviewStatus, loadRealCsv } from "../lib/dataLoader";
-import {
-  formatOverviewColumnsPreview,
-  formatOverviewKindsSummary,
-} from "../lib/overviewFormat";
-import type {
-  CheckedDomainSummary,
-  OverviewStatusResponse,
-  OverviewWindowHours,
-  PageId,
-} from "../types/app";
+import React, { useRef, useState } from "react";
+import { ArrowRight, Send, Sparkles } from "lucide-react";
+import { SAFETY_TEXT, SAFETY_RANK, fmtVal, overallLevel, type DomainStatus, type Safety } from "../lib/status";
+import { askAi } from "../lib/ai";
+import { answerLocal, buildFacts } from "../lib/qa";
+import { Card, SAFETY_STYLE, SafetyBadge, Sparkline } from "../components/ui";
 
-interface OverviewPageProps {
-  datasets: RealDataset[];
-  anomaliesMap: Record<string, AnomaliesResponse>;
-  checkedDomains: Record<string, CheckedDomainSummary>;
-  overviewStatus: OverviewStatusResponse | null;
-  overviewWindowHours: OverviewWindowHours;
-  onUpdateOverviewStatus: (status: OverviewStatusResponse) => void;
-  onChangeOverviewWindowHours: (hours: OverviewWindowHours) => void;
-  onUpdateCheckedDomain: (id: string, summary: CheckedDomainSummary) => void;
-  onSelectDomainAndNavigate: (id: string, page: PageId) => void;
+interface Props {
+  statuses: DomainStatus[];
+  onOpenDecision: (datasetId: string) => void;
+  onOpenData: (datasetId: string) => void;
 }
 
-const WINDOW_OPTIONS: OverviewWindowHours[] = [24, 72, 168];
+const SUGGESTIONS = ["哪個場域最危險？", "未來 3 小時需要注意什麼？", "資料可信嗎？", "有什麼建議？"];
 
-function getCommonCauseHint(kind: string): string {
-  switch (kind) {
-    case "drift_or_offset":
-      return "常見可能原因：感測器零點隨時間緩慢偏移、探頭附著髒污或結垢，或是現場局部環境條件與其他感測器出現真實差異（資料本身無法證實）。";
-    case "stuck_value":
-    case "stuck_sensor":
-    case "flatline":
-      return "常見可能原因：通訊模組暫時重傳最後一筆讀值、感測器取樣停滯，或是當下環境確實維持長時間穩定（資料本身無法證實）。";
-    case "out_of_historical_range":
-      return "常見可能原因：短時極端天氣／現場作業變化、採樣雜訊突波，或量測尺度異常（資料本身無法證實）。";
-    default:
-      return "常見可能原因：現場環境劇烈變化、量測元件偏移或資料傳輸中斷，需由現場人員對照作業紀錄確認（資料本身無法證實）。";
-  }
+interface QA {
+  q: string;
+  lines: string[];
+  source: "gemini" | "local";
+  focusId: string | null;
 }
 
-export const OverviewPage: React.FC<OverviewPageProps> = ({
-  datasets,
-  anomaliesMap,
-  checkedDomains,
-  overviewStatus,
-  overviewWindowHours,
-  onUpdateOverviewStatus,
-  onChangeOverviewWindowHours,
-  onUpdateCheckedDomain,
-  onSelectDomainAndNavigate,
-}) => {
-  const [checking, setChecking] = useState(false);
-  const [windowSwitching, setWindowSwitching] = useState(false);
-  const [progressIdx, setProgressIdx] = useState(0);
-  const [progressName, setProgressName] = useState("");
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const [checkError, setCheckError] = useState<string | null>(null);
-  const [windowError, setWindowError] = useState<string | null>(null);
+export const OverviewPage: React.FC<Props> = ({ statuses, onOpenDecision, onOpenData }) => {
+  const overall = overallLevel(statuses);
+  const withModel = statuses.filter((s) => s.hasModel);
+  const counts = (["danger", "data", "caution", "safe"] as Safety[]).map((l) => ({
+    level: l,
+    n: withModel.filter((s) => s.level === l).length,
+  }));
+  const worst = [...withModel].sort((a, b) => SAFETY_RANK[b.level] - SAFETY_RANK[a.level])[0];
+  const needAttention = worst && SAFETY_RANK[worst.level] >= SAFETY_RANK.caution;
+  const asOf = withModel.map((s) => s.asOf).filter(Boolean).sort().pop();
 
-  const handleCheckAllDomains = async () => {
-    if (checking || datasets.length === 0) return;
-    setChecking(true);
-    setCheckError(null);
-    setWindowError(null);
-    setElapsedSec(0);
-    const startMs = Date.now();
-    const timer = window.setInterval(() => {
-      setElapsedSec(Number(((Date.now() - startMs) / 1000).toFixed(1)));
-    }, 100);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [history, setHistory] = useState<QA[]>([]);
+  const endRef = useRef<HTMLDivElement>(null);
 
-    try {
-      for (let i = 0; i < datasets.length; i += 1) {
-        const ds = datasets[i];
-        setProgressIdx(i + 1);
-        setProgressName(ds.display_name);
-
-        const parsed = await loadRealCsv(ds.id);
-        let totalCells = 0;
-        let missingCells = 0;
-        for (const row of parsed.rows) {
-          for (const s of parsed.sensorHeaders) {
-            totalCells += 1;
-            if (row.values[s] === null || row.values[s] === undefined) {
-              missingCells += 1;
-            }
-          }
-        }
-        const missingRatePct =
-          totalCells > 0 ? (missingCells / totalCells) * 100 : 0;
-        const anom = anomaliesMap[ds.id];
-        const nAnomalies = anom?.n_events ?? 0;
-        const nTasks = ds.forecast_tasks.filter((t) => t.enabled).length;
-        const latestTs =
-          parsed.rows[parsed.rows.length - 1]?.timestamp ?? ds.time.end;
-
-        onUpdateCheckedDomain(`real:${ds.id}`, {
-          datasetId: ds.id,
-          checkedAt: new Date().toLocaleTimeString("zh-Hant", {
-            hour12: false,
-          }),
-          rows: parsed.rows.length,
-          missingRatePct,
-          nAnomalies,
-          nTasks,
-          latestTimestamp: latestTs,
-          statusLabel: "已檢查",
-        });
-      }
-
-      const statusRes = await fetchOverviewStatus(overviewWindowHours);
-      onUpdateOverviewStatus(statusRes);
-
-      setElapsedSec(Number(((Date.now() - startMs) / 1000).toFixed(1)));
-    } catch (err) {
-      setCheckError(err instanceof Error ? err.message : "檢查過程發生錯誤");
-    } finally {
-      window.clearInterval(timer);
-      setChecking(false);
-    }
+  const ask = async (question: string) => {
+    const q = question.trim();
+    if (!q || busy) return;
+    setBusy(true);
+    setInput("");
+    const local = answerLocal(q, statuses);
+    const target = local.focusId ?? worst?.datasetId ?? statuses[0]?.datasetId;
+    const ai = target ? await askAi(target, buildFacts(statuses), q) : null;
+    setHistory((h) => [
+      ...h,
+      ai
+        ? { q, lines: ai.lines, source: "gemini", focusId: local.focusId }
+        : { q, lines: local.text.split("\n"), source: "local", focusId: local.focusId },
+    ]);
+    setBusy(false);
+    window.setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   };
-
-  const handleSwitchWindow = async (nextHours: OverviewWindowHours) => {
-    if (windowSwitching || checking) return;
-    setWindowError(null);
-    onChangeOverviewWindowHours(nextHours);
-    setWindowSwitching(true);
-    try {
-      const statusRes = await fetchOverviewStatus(nextHours);
-      onUpdateOverviewStatus(statusRes);
-    } catch (err) {
-      setWindowError(
-        err instanceof Error ? err.message : "切換時間範圍失敗"
-      );
-    } finally {
-      setWindowSwitching(false);
-    }
-  };
-
-  const attentionItems = useMemo(() => {
-    const list: Array<{
-      datasetId: string;
-      datasetName: string;
-      kindZh: string;
-      kind: string;
-      column: string;
-      start: string;
-      end: string;
-      hours: number;
-      score: number;
-      note: string;
-    }> = [];
-    for (const ds of datasets) {
-      const anom = anomaliesMap[ds.id];
-      if (!anom) continue;
-      for (const ev of anom.events.slice(0, 2)) {
-        list.push({
-          datasetId: ds.id,
-          datasetName: ds.display_name,
-          kindZh: ev.kind_zh,
-          kind: ev.kind,
-          column: ev.column,
-          start: ev.start,
-          end: ev.end,
-          hours: ev.hours,
-          score: ev.score,
-          note: ev.note,
-        });
-      }
-    }
-    return list;
-  }, [datasets, anomaliesMap]);
 
   return (
-    <div className="space-y-6 min-w-0">
-      {/* Page Header & Action Bar */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900">
-            七場域環境監測總覽
-          </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            目前檢視「真實感測資料」（7 個場域）。未執行檢查前各場域維持「尚未檢查」狀態，不顯示任何結論；不代表設備正常。
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleCheckAllDomains}
-          disabled={checking || datasets.length === 0}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-[#0B63CE] text-white text-sm font-medium hover:bg-[#0952AD] disabled:opacity-60 w-full sm:w-auto shrink-0"
-        >
-          {checking ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              檢查中…
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4" />
-              檢查所有場域（7 場域）
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Sequential Progress Bar */}
-      {(checking || elapsedSec > 0 || checkError) && (
-        <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-2 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-medium text-slate-800">
-              {checking
-                ? `正在檢查「${progressName}」（${progressIdx}／${datasets.length}）…`
-                : checkError
-                ? "檢查未完成"
-                : `已完成全部 ${datasets.length} 個場域檢查`}
-            </span>
-            <span className="font-mono-tabular text-slate-500 inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              已花時間：{elapsedSec.toFixed(1)} 秒
-            </span>
-          </div>
-          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#0B63CE] transition-all duration-200"
-              style={{
-                width: `${
-                  datasets.length > 0
-                    ? Math.round(
-                        ((checking ? progressIdx : datasets.length) /
-                          datasets.length) *
-                          100
-                      )
-                    : 0
-                }%`,
-              }}
-            />
-          </div>
-          {checkError && (
-            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2.5 py-1.5 break-words">
-              {checkError}
+    <div className="space-y-4">
+      {/* 整體狀態 */}
+      <section
+        data-testid="overall-banner"
+        data-level={overall}
+        className={`rounded-lg border p-4 flex flex-wrap items-center justify-between gap-3 ${SAFETY_STYLE[overall].bg} ${SAFETY_STYLE[overall].border} ${SAFETY_STYLE[overall].text}`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="scale-150 origin-left mr-2">{SAFETY_STYLE[overall].icon}</div>
+          <div>
+            <div className="text-lg font-bold leading-tight">
+              未來 1–3 小時：
+              {overall === "safe" ? "各場域安全" : overall === "data" ? "需先確認資料" : overall === "caution" ? "需要注意" : "有危險"}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Checked Overview Summary + Window Switcher (Real mode after checking) */}
-      {overviewStatus && (
-        <section
-          aria-label="檢查結果摘要與時間範圍"
-          className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 space-y-3 min-w-0"
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-w-0">
-            <div className="space-y-1 min-w-0">
-              <div
-                data-testid="overview-summary-text"
-                className="text-sm sm:text-base font-semibold text-slate-900 break-words"
-              >
-                有狀況 {overviewStatus.summary.has_issue} 個、近期未發現{" "}
-                {overviewStatus.summary.none_recent} 個（時間範圍：資料最後一筆往前{" "}
-                {overviewStatus.window_hours} 小時）
-              </div>
-              <div className="text-xs text-slate-600">
-                不代表設備正常：系統沒有經驗證的門檻，不判斷『正常』。
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 shrink-0">
-              <div
-                role="group"
-                aria-label="時間範圍切換"
-                className="inline-flex flex-wrap items-center gap-1.5"
-              >
-                {WINDOW_OPTIONS.map((win) => {
-                  const active = overviewWindowHours === win;
-                  return (
-                    <button
-                      key={win}
-                      type="button"
-                      aria-pressed={active}
-                      disabled={windowSwitching || checking}
-                      onClick={() => handleSwitchWindow(win)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                        active
-                          ? "bg-[#0B63CE] text-white border-[#0B63CE]"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                      } disabled:opacity-60`}
-                    >
-                      {win} 小時
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[11px] text-slate-500">
-                以各場域資料最後一筆為基準；時間範圍是呈現選擇，不是門檻
-              </span>
+            <div className="text-xs mt-0.5 flex flex-wrap gap-x-3">
+              {counts
+                .filter((c) => c.n > 0)
+                .map((c) => (
+                  <span key={c.level}>
+                    {SAFETY_TEXT[c.level]} {c.n}
+                  </span>
+                ))}
+              {asOf && <span className="opacity-70">資料截至 {asOf.slice(0, 16)}</span>}
             </div>
           </div>
-
-          {windowSwitching && (
-            <div className="text-xs text-slate-500 inline-flex items-center gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              正在更新時間範圍檢視…
-            </div>
-          )}
-
-          {windowError && (
-            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2.5 py-1.5 break-words">
-              {windowError}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 7 Domain Cards Grid */}
-      <section aria-label="七場域摘要卡片" className="min-w-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 min-w-0">
-          {datasets.map((ds) => {
-            const cacheKey = `real:${ds.id}`;
-            const checked = checkedDomains[cacheKey];
-            const domainStatus = overviewStatus?.datasets?.[ds.id];
-            const anom = anomaliesMap[ds.id];
-            const enabledTasks = ds.forecast_tasks.filter((t) => t.enabled).length;
-            const meanMissing =
-              ds.columns.length > 0
-                ? (ds.columns.reduce((acc, c) => acc + (c.missing_frac ?? 0), 0) /
-                    ds.columns.length) *
-                  100
-                : 0;
-
-            const kindBadges = domainStatus
-              ? formatOverviewKindsSummary(domainStatus.kinds)
-              : [];
-            const columnPreview = domainStatus
-              ? formatOverviewColumnsPreview(domainStatus.columns, 4)
-              : "";
-
-            const isChecked = Boolean(domainStatus);
-
-            return (
-              <article
-                key={ds.id}
-                data-domain-card={ds.id}
-                className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between gap-3 hover:border-slate-300 transition-colors min-w-0"
-              >
-                <div className="space-y-2.5 min-w-0">
-                  <div className="flex items-start justify-between gap-2 min-w-0">
-                    <div className="min-w-0">
-                      <h2 className="text-base font-semibold text-slate-900 break-words">
-                        {ds.display_name}
-                      </h2>
-                      <div className="text-xs text-slate-500 mt-0.5 break-all">
-                        {ds.domain_type} · {ds.id}
-                      </div>
-                    </div>
-                    {isChecked ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 shrink-0">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#0B63CE]" />
-                        已檢查{checked ? ` (${checked.checkedAt})` : ""}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 shrink-0">
-                        <HelpCircle className="h-3.5 w-3.5" />
-                        尚未檢查
-                      </span>
-                    )}
-                  </div>
-
-                  {ds.id === "rearing_plant_1_north" && (
-                    <div>
-                      <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300">
-                        此場域不提供預測（資料不足）
-                      </span>
-                    </div>
-                  )}
-
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs pt-2 border-t border-slate-100 min-w-0">
-                    <div className="min-w-0">
-                      <dt className="text-slate-500">資料期間（未標時區）</dt>
-                      <dd className="font-mono-tabular text-slate-800 mt-0.5 break-words">
-                        {ds.time.start.slice(0, 10)} ～ {ds.time.end.slice(0, 10)}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-slate-500">資料列數／感測器數</dt>
-                      <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                        {ds.time.rows} 列 · {ds.columns.length} 欄
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-slate-500">平均缺值率／時間缺口</dt>
-                      <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                        {(checked ? checked.missingRatePct : meanMissing).toFixed(1)}% ·{" "}
-                        {ds.time.n_gaps ?? 0} 段
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-slate-500">預測任務／候選事件</dt>
-                      <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                        {ds.id === "rearing_plant_1_north"
-                          ? "0 任務（不建模型）"
-                          : `${enabledTasks} 任務`}{" "}
-                        · {anom?.n_events ?? 0} 候選
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {/* Real mode status result block (ONLY rendered after clicking check) */}
-                  {domainStatus && (
-                    domainStatus.status === "has_issue" ? (
-                      <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1.5 text-xs text-amber-950 min-w-0">
-                        <div className="font-semibold text-amber-900 break-words">
-                          有狀況（最近 {domainStatus.window_hours} 小時有{" "}
-                          {domainStatus.n_events} 筆候選事件，待人員確認）
-                        </div>
-                        {kindBadges.length > 0 && (
-                          <div className="text-amber-900 break-words">
-                            事件種類：{kindBadges.join("、")}
-                          </div>
-                        )}
-                        {columnPreview && (
-                          <div className="text-amber-900 break-words">
-                            涉及感測器：{columnPreview}
-                          </div>
-                        )}
-                        <div className="text-[11px] text-amber-800 pt-1 border-t border-amber-200/80">
-                          不代表設備正常：系統沒有經驗證的門檻，不判斷『正常』
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3 space-y-1.5 text-xs text-emerald-950 min-w-0">
-                        <div className="font-semibold text-emerald-900">
-                          近期未發現狀況
-                        </div>
-                        <div className="text-emerald-900 break-words">
-                          最近 {domainStatus.window_hours} 小時沒有候選事件；歷史上共{" "}
-                          {domainStatus.total_events} 筆（見決策輔助）
-                        </div>
-                        <div className="text-[11px] text-emerald-800 pt-1 border-t border-emerald-200/80">
-                          不代表設備正常：系統沒有經驗證的門檻，不判斷『正常』
-                        </div>
-                      </div>
-                    )
-                  )}
-
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onSelectDomainAndNavigate(ds.id, "domain_home")}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#0B63CE] hover:underline"
-                    >
-                      進入場域看板
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onSelectDomainAndNavigate(ds.id, "decision_support")
-                      }
-                      className="text-slate-600 hover:text-[#0B63CE] font-medium"
-                    >
-                      決策輔助
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onSelectDomainAndNavigate(ds.id, "explorer")
-                      }
-                      className="text-slate-600 hover:text-[#0B63CE] font-medium"
-                    >
-                      探索資料
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
         </div>
+        {needAttention && worst && (
+          <button
+            type="button"
+            onClick={() => onOpenDecision(worst.datasetId)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700"
+          >
+            前往決策：{worst.name.split("（")[0]}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        )}
       </section>
 
-      {/* 需要注意的事 */}
-      <section className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 space-y-4 min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-              <span>需要注意的事（候選事件摘要，不是故障判定）</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              列舉各場域偵測器分數最高的候選事件，並拆分為「發生什麼／可能原因／建議怎麼做／資料依據」四段；所有候選皆需人工確認。
-            </p>
-          </div>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* 各場域 */}
+        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          {statuses.map((s) => (
+            <button
+              key={s.datasetId}
+              type="button"
+              data-testid={`domain-card-${s.datasetId}`}
+              data-level={s.level}
+              onClick={() => (s.hasModel ? onOpenDecision(s.datasetId) : onOpenData(s.datasetId))}
+              className={`text-left rounded-lg border p-3.5 bg-white hover:shadow-sm transition-shadow ${
+                SAFETY_RANK[s.level] >= SAFETY_RANK.caution ? SAFETY_STYLE[s.level].border : "border-slate-200"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-900 truncate">{s.name.split("（")[0]}</div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {s.hasModel ? `${s.policy?.sensor} · ${s.source === "import" ? "匯入資料" : "預計算"}` : s.noModelReason}
+                  </div>
+                </div>
+                <SafetyBadge level={s.level} />
+              </div>
+              {s.hasModel && s.policy && (
+                <div className="mt-2.5 flex items-end justify-between gap-3">
+                  <div>
+                    <div className="text-2xl font-bold tabular-nums text-slate-900 leading-none">
+                      {fmtVal(s.current)}
+                      <span className="text-xs font-normal text-slate-500 ml-1">{s.unit}</span>
+                    </div>
+                    <div className="mt-1.5 flex gap-1.5">
+                      {s.horizons.map((h) => (
+                        <span
+                          key={h.h}
+                          className="inline-flex items-center gap-1 text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5"
+                          title={`${h.h} 小時後預測 ${fmtVal(h.point)} ${s.unit}`}
+                        >
+                          <span className="inline-block h-2 w-2 rounded-full" style={{ background: SAFETY_STYLE[h.level].dot }} />
+                          +{h.h}h {fmtVal(h.point)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <Sparkline
+                    values={s.spark}
+                    lines={[
+                      { y: s.policy.caution, color: "#fab219" },
+                      { y: s.policy.alarm, color: "#d03b3b" },
+                    ]}
+                  />
+                </div>
+              )}
+            </button>
+          ))}
         </div>
 
-        {attentionItems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 min-w-0">
-            {attentionItems.map((item, idx) => (
-              <div
-                key={`${item.datasetId}-${idx}`}
-                className="border border-slate-200 rounded-md p-3.5 bg-slate-50/70 space-y-2 text-xs min-w-0"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+        {/* AI 問答 */}
+        <Card
+          title={
+            <span className="inline-flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-[#0B63CE]" />
+              AI 問答
+            </span>
+          }
+          className="flex flex-col min-h-[320px] xl:sticky xl:top-20 xl:max-h-[calc(100vh-7rem)]"
+        >
+          <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1" data-testid="qa-history" aria-live="polite">
+            {history.length === 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTIONS.map((q) => (
                   <button
+                    key={q}
                     type="button"
-                    onClick={() =>
-                      onSelectDomainAndNavigate(item.datasetId, "domain_home")
-                    }
-                    className="font-semibold text-sm text-[#0B63CE] hover:underline text-left break-words min-w-0"
+                    onClick={() => void ask(q)}
+                    className="px-2.5 py-1 rounded-full border border-slate-300 text-xs text-slate-700 hover:bg-slate-50"
                   >
-                    {item.datasetName}
+                    {q}
                   </button>
-                  <span className="text-amber-800 font-medium shrink-0">
-                    候選事件・{item.kindZh}
-                  </span>
-                </div>
-
-                <div className="space-y-1.5 text-slate-700 leading-relaxed break-words">
-                  <div>
-                    <strong className="text-slate-900">發生什麼：</strong>
-                    偵測器在「{item.column}」標出「{item.kindZh}」候選事件（
-                    {item.note}）。這是候選，不是設備故障判定。
-                  </div>
-                  <div>
-                    <strong className="text-slate-900">可能原因：</strong>
-                    {getCommonCauseHint(item.kind)}
-                  </div>
-                  <div>
-                    <strong className="text-slate-900">建議怎麼做：</strong>
-                    請現場人員確認感測器來源與現場作業紀錄，並以人工複測對照（本系統不控制任何設備）。
-                  </div>
-                  <div className="font-mono-tabular text-slate-600 pt-1 border-t border-slate-200 break-words">
-                    <strong className="text-slate-800 font-sans">
-                      資料依據：
-                    </strong>
-                    感測器 {item.column} ｜ 起訖 {item.start} ～ {item.end} ｜
-                    持續 {item.hours} 小時 ｜ 分數強度 {item.score.toFixed(2)}
+                ))}
+              </div>
+            )}
+            {history.map((m, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="text-xs font-medium text-slate-900 bg-slate-100 rounded-md px-2.5 py-1.5 ml-6">{m.q}</div>
+                <div className="text-sm text-slate-800 bg-[#EFF6FF] border border-blue-100 rounded-md px-2.5 py-2 mr-6 space-y-1">
+                  {m.lines.map((l, j) => (
+                    <p key={j}>{l}</p>
+                  ))}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-[10px] text-slate-500">{m.source === "gemini" ? "Gemini" : "規則式"}</span>
+                    {m.focusId && (
+                      <button type="button" className="text-[11px] font-semibold text-[#0B63CE] hover:underline" onClick={() => onOpenDecision(m.focusId!)}>
+                        前往決策 →
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
+            {busy && <div className="text-xs text-slate-500">思考中…</div>}
+            <div ref={endRef} />
           </div>
-        ) : (
-          <div className="text-xs text-slate-500 py-4">
-            目前尚未載入候選事件或各場域無候選事件。
-          </div>
-        )}
-      </section>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void ask(input);
+            }}
+            className="flex gap-2"
+          >
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              maxLength={200}
+              placeholder="問問場域狀況…"
+              aria-label="輸入問題"
+              className="flex-1 min-w-0 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#0B63CE] focus:outline-none"
+            />
+            <button type="submit" disabled={busy || !input.trim()} aria-label="送出" className="px-3 rounded-md bg-[#0B63CE] text-white disabled:opacity-40">
+              <Send className="h-4 w-4" />
+            </button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 };

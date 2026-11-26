@@ -1318,3 +1318,13 @@ test("F12：引擎因沒有管理金鑰而停用寫入（403 寫入功能停用�
     }
   );
 });
+
+test("GET /api/import/fetch：缺網址 400；非白名單／內網網址 400；不對外連線", async () => {
+  await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
+    assert.equal((await fetch(`${base}/api/import/fetch`)).status, 400);
+    for (const bad of ["https://127.0.0.1/x", "http://docs.google.com/x", "https://evil.example.com/x.csv"]) {
+      const r = await fetch(`${base}/api/import/fetch?url=${encodeURIComponent(bad)}`);
+      assert.equal(r.status, 400, bad);
+    }
+  });
+});

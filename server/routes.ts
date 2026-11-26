@@ -26,6 +26,7 @@ import {
   withModelFallback,
 } from "./gemini.ts";
 import type { GeminiClientBundle, GeminiErrorCategory } from "./gemini.ts";
+import { fetchImportText, parseExtraHosts } from "./importProxy.ts";
 import {
   computeDomainStatus,
   InvalidWindowHoursError,
@@ -825,6 +826,26 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
   });
 
   // General Gemini explanation
+  // 資料匯入中心：由伺服器代為取得公開試算表／CSV 文字（白名單網域；瀏覽器直接取檔被 CORS 擋下時的備援）
+  router.get("/import/fetch", async (req: Request, res: Response) => {
+    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+    if (!limiter.check(clientIp).allowed) {
+      res.status(429).json({ detail: "請求過於頻繁，請稍後再試" });
+      return;
+    }
+    const url = typeof req.query.url === "string" ? req.query.url : "";
+    if (!url || url.length > 2000) {
+      res.status(400).json({ detail: "缺少網址" });
+      return;
+    }
+    const result = await fetchImportText(url, parseExtraHosts(process.env.IMPORT_ALLOWED_HOSTS));
+    if (!result.ok) {
+      res.status(result.status).json({ detail: result.reason });
+      return;
+    }
+    res.json({ text: result.text });
+  });
+
   router.post("/ai/explain", async (req: Request, res: Response) => {
     const clientIp = req.ip || req.socket.remoteAddress || "unknown";
     const rate = limiter.check(clientIp);

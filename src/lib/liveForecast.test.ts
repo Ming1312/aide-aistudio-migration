@@ -50,7 +50,6 @@ import {
   validateLiveDomainsResponse,
   validateLiveMonitorResponse,
 } from "./liveForecast";
-import { LiveForecastPage } from "../pages/LiveForecastPage";
 import { PageErrorBoundary } from "../components/PageErrorBoundary";
 
 const baseStatus: LiveStatusResponse = {
@@ -384,59 +383,7 @@ test("回應格式與 Content-Type 驗證：HTML、物件／陣列互換、null�
   }
 });
 
-test("頁面與 ErrorBoundary 渲染：LiveForecastPage 初始渲染不拋例外；模擬情境文字已更新；ErrorBoundary 隔離單頁錯誤", () => {
-  const html = renderToStaticMarkup(
-    React.createElement(PageErrorBoundary, {
-      pageKey: "live_forecast:sheep_barn:real",
-      children: React.createElement(LiveForecastPage, {
-        datasets: [
-          {
-            id: "sheep_barn",
-            display_name: "羊舍（成羊區／仔羊區）",
-            domain_id: "sheep_barn",
-            domain_type: "livestock",
-            data_kind: "real",
-            file: "sheep_barn.csv",
-            time: {
-              start: "2026-08-01 00:00:00",
-              end: "2026-08-13 14:00:00",
-              rows: 100,
-              sampling: "hourly",
-              expected_hours: 100,
-              missing_hours_from_gaps: 0,
-              n_gaps: 0,
-              longest_gap_hours: 0,
-              timezone: "Asia/Taipei",
-              timestamp_status: "verified",
-            },
-            columns: [],
-            forecast_tasks: [],
-            provenance_ref: "sheep_barn",
-          },
-        ],
-        datasetId: "sheep_barn",
-        onSelectDataset: () => undefined,
-        health: {
-          ok: true,
-          engine_connected: true,
-          engine_version: "1.0.0",
-          read_only: true,
-          version_warning: false,
-          warning_message: null,
-          gemini_configured: false,
-          admin_configured: true,
-          precomputed_available: true,
-          live_sim_enabled: true,
-        },
-        adminRole: { configured: true, role: "admin" },
-        onLiveBannerChange: () => undefined,
-      }),
-    })
-  );
-  assert.ok(html.includes("即時預測資料流"));
-  assert.ok(html.includes("情境：一般（不注入事件）"));
-  assert.equal(html.includes("情境：正常"), false);
-
+test("ErrorBoundary 隔離單頁錯誤並顯示重新載入", () => {
   const eb = new PageErrorBoundary({
     pageKey: "live_forecast",
     children: null,

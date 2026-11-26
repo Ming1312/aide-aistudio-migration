@@ -116,7 +116,7 @@ cd demo_kit
 填好後按 Apply changes，開 `/api/health` 應看到 `engine_connected: true`、`live_writes_enabled: false`。
 引擎連不上時 App 不會當機：決策輔助改用預計算結果並標示來源（`precomputed`），即時預測頁保留上次畫面並說明離線，不會拿預計算檔冒充即時預測。
 
-> **v1.1.0 之後的本機變更（尚未推送、未在 AI Studio 驗證）**：「場域決策」五頁（風險評估、處置決策、異常診斷、AI 預測、歷史回放）七個場域一視同仁（研究預測＋假定門檻；羊舍不再有專屬頁）；即時預測頁在沒有引擎時改為「預先準備資料＋模擬新資料匯入」展示。另有：管理者改為「帳號＋密碼」登入，並提供**公開的展示預設帳號 `demo`／`aide-demo`**（只能看管理狀態、**不能寫入引擎**；一設定 `ADMIN_PASSPHRASE_HASH` 就自動停用）、F12 訊息修正。見 [`docs/final/09_CHANGES_AFTER_V1_1_0.md`](docs/final/09_CHANGES_AFTER_V1_1_0.md)。
+> **v1.1.0 之後的本機變更（尚未推送、未在 AI Studio 驗證）**：介面改成五個區塊（總覽／資料／決策／匯入／設定）；七個場域一視同仁（研究預測＋假定門檻）；資料匯入中心可接 Google 試算表、CSV 網址、檔案或貼上；合成展示已刪除；管理者改為「帳號＋密碼」登入並提供**公開的展示預設帳號 `demo`／`aide-demo`**（不能寫入引擎）。以下章節中的舊頁面（場域看板、即時預測、決策輔助等）已不在 App 內。見 [`docs/final/09_CHANGES_AFTER_V1_1_0.md`](docs/final/09_CHANGES_AFTER_V1_1_0.md)。
 
 ## 已驗證與已知限制
 

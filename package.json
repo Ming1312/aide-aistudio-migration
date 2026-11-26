@@ -8,7 +8,7 @@
     "build": "vite build",
     "start": "node server.ts",
     "lint": "tsc --noEmit",
-    "test": "tsx --test reference/adminAuth.test.ts reference/geminiExplain.test.ts reference/decisionExplain.test.ts server/routes.test.ts server/gemini.test.ts server/overviewStatus.test.ts src/lib/liveForecast.test.ts src/lib/frontendFixes.test.ts src/lib/candidateRisk.test.ts src/lib/replayEngine.test.ts"
+    "test": "tsx --test reference/adminAuth.test.ts reference/geminiExplain.test.ts reference/decisionExplain.test.ts server/routes.test.ts server/gemini.test.ts server/overviewStatus.test.ts server/importProxy.test.ts src/lib/liveForecast.test.ts src/lib/frontendFixes.test.ts src/lib/importSources.test.ts src/lib/status.test.ts src/lib/candidateRisk.test.ts src/lib/replayEngine.test.ts"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
