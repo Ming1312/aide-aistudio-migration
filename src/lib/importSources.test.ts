@@ -69,3 +69,19 @@ test("buildLiveTask：因果——起點只用已抵達的值；最後起點沒�
   assert.equal(buildLiveTask("x", "TEMP", "°C", 3, short), null);
   assert.equal(toHourly([], "TEMP").size, 0);
 });
+
+test("parseImportedText：原始匯出格式（日期＋小時兩欄、表頭帶場域前綴）可直接匯入", () => {
+  const north = [
+    { key: "風速", raw_header: "育成一廠北側 - 風速" },
+    { key: "溫度", raw_header: "育成一廠北側 - 溫度" },
+  ] as unknown as RealColumn[];
+  const csv = "日期,小時,育成一廠北側 - 風速,育成一廠北側 - 溫度\n2026/06/01,8,1,28.4\n2026/06/01,9,0.4,28.7\n2026/06/02,0,2,27\n2026/06/02,99,2,27\n";
+  const p = parseImportedText(csv, north);
+  assert.equal(p.rows.length, 3);
+  assert.deepEqual(p.rows.map((r) => r.timestamp), ["2026-06-01 08:00:00", "2026-06-01 09:00:00", "2026-06-02 00:00:00"]);
+  assert.equal(p.rows[0].values["風速"], 1);
+  assert.equal(p.rows[1].values["溫度"], 28.7);
+  assert.deepEqual(p.unmatched, []);
+  assert.ok(p.issues.some((i) => i.includes("1 列")));
+  assert.equal(new Set(p.rows.map((r) => r.tsMs)).size, 3);
+});

@@ -85,13 +85,18 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
   }
   const delim = detectDelimiter(lines[0]);
   const headers = splitLine(lines[0], delim);
-  let tsIdx = headers.findIndex((h) => /^(timestamp|time|datetime|date|日期|時間|時間戳記?)$/i.test(h.trim()));
+  // 原始企業匯出格式：「日期」＋「小時」兩欄（例如 2026/06/01、8）
+  const dateIdx = headers.findIndex((h) => /^(日期|date)$/i.test(h.trim()));
+  const hourIdx = headers.findIndex((h) => /^(小時|時|hour|hr)$/i.test(h.trim()));
+  const hasSingleTs = headers.some((h) => /^(timestamp|datetime|時間戳記?)$/i.test(h.trim()));
+  const splitTs = dateIdx >= 0 && hourIdx >= 0 && !hasSingleTs;
+  let tsIdx = splitTs ? dateIdx : headers.findIndex((h) => /^(timestamp|time|datetime|date|日期|時間|時間戳記?)$/i.test(h.trim()));
   if (tsIdx < 0) tsIdx = 0;
-  const timestampColumn = headers[tsIdx] ?? null;
+  const timestampColumn = splitTs ? `${headers[dateIdx]}＋${headers[hourIdx]}` : (headers[tsIdx] ?? null);
   const matched: Record<string, string> = {};
   const unmatched: string[] = [];
   headers.forEach((h, i) => {
-    if (i === tsIdx) return;
+    if (i === tsIdx || (splitTs && i === hourIdx)) return;
     const key = matchColumn(h, columns);
     if (key) matched[h] = key;
     else if (h) unmatched.push(h);
@@ -100,7 +105,11 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
   let badTs = 0;
   for (let r = 1; r < lines.length; r++) {
     const cells = splitLine(lines[r], delim);
-    const tsRaw = cells[tsIdx] ?? "";
+    let tsRaw = cells[tsIdx] ?? "";
+    if (splitTs) {
+      const hh = Number((cells[hourIdx] ?? "").match(/\d+/)?.[0]);
+      tsRaw = Number.isInteger(hh) && hh >= 0 && hh <= 23 ? `${tsRaw.trim()} ${String(hh).padStart(2, "0")}:00:00` : "";
+    }
     // 容忍 "2026/11/27 08:00"、"2026-11-27T08:00:00" 與 "2026-11-27 08:00"
     const tsNorm = tsRaw.replace(/\//g, "-").replace("T", " ");
     const ms = parseLocalTimestampMs(tsNorm);
@@ -110,6 +119,7 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
     }
     const values: Record<string, number | null> = {};
     headers.forEach((h, i) => {
+      if (splitTs && i === hourIdx) return;
       const key = matched[h];
       if (!key) return;
       const raw = (cells[i] ?? "").trim();
@@ -119,7 +129,7 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
     rows.push({ timestamp: tsNorm.length === 16 ? `${tsNorm}:00` : tsNorm, tsMs: ms, values, rawCells: cells, flagValue: "import" });
   }
   if (badTs > 0) issues.push(`${badTs} 列的時間無法辨識，已略過`);
-  if (timestampColumn && !/time|date|日期|時間/i.test(timestampColumn)) {
+  if (!splitTs && timestampColumn && !/time|date|日期|時間/i.test(timestampColumn)) {
     issues.push(`未找到時間欄名稱，以第一欄「${timestampColumn}」當時間`);
   }
   if (Object.keys(matched).length === 0) issues.push("沒有任何欄位對應到此場域的感測器欄名");
