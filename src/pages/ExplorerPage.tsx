@@ -18,7 +18,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { DataKind, DemoManifest, RealDataset } from "../../contracts/types";
+import type { RealDataset } from "../../contracts/types";
 import { DataTableModal } from "../components/DataTableModal";
 import {
   buildCsvDownloadText,
@@ -31,10 +31,9 @@ import {
   triggerCsvDownload,
 } from "../lib/csv";
 import type { ColumnStats } from "../lib/csv";
-import { loadRealCsv, loadSyntheticCsv } from "../lib/dataLoader";
+import { loadRealCsv } from "../lib/dataLoader";
 import { buildExplorerFacts } from "../lib/facts";
 import type {
-  DomainSyntheticState,
   ExplainModalPayload,
   PageId,
   ParsedCsvDataset,
@@ -63,19 +62,13 @@ const ANALYSIS_TABS: Array<{ id: AnalysisType; label: string }> = [
 ];
 
 interface ExplorerPageProps {
-  dataKind: DataKind;
   dataset: RealDataset;
-  demoManifest: DemoManifest | null;
-  syntheticState?: DomainSyntheticState;
   onNavigate: (page: PageId) => void;
   onOpenExplain: (payload: ExplainModalPayload) => void;
 }
 
 export const ExplorerPage: React.FC<ExplorerPageProps> = ({
-  dataKind,
   dataset,
-  demoManifest,
-  syntheticState,
   onNavigate,
   onOpenExplain,
 }) => {
@@ -89,42 +82,12 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
 
-  const synthStep = syntheticState?.currentStep ?? 1;
-
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    const loadPromise =
-      dataKind === "real"
-        ? loadRealCsv(dataset.id)
-        : (() => {
-            const synthDomain = demoManifest?.domains.find(
-              (d) => d.id === dataset.id
-            );
-            const batches = synthDomain?.batches.slice(0, synthStep) ?? [];
-            return Promise.all(
-              batches.map((b) => loadSyntheticCsv(dataset.id, b.code))
-            ).then((parts) => {
-              if (parts.length === 0) {
-                return {
-                  headers: [],
-                  sensorHeaders: [],
-                  flagColumn: "__synthetic" as const,
-                  rows: [],
-                };
-              }
-              const mergedRows: ParsedCsvRow[] = [];
-              for (const p of parts) mergedRows.push(...p.rows);
-              return {
-                headers: parts[0].headers,
-                sensorHeaders: parts[0].sensorHeaders,
-                flagColumn: "__synthetic" as const,
-                rows: mergedRows,
-              };
-            });
-          })();
+    const loadPromise = loadRealCsv(dataset.id);
 
     loadPromise
       .then((parsed) => {
@@ -154,7 +117,7 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [dataKind, dataset.id, dataset.columns, demoManifest, synthStep]);
+  }, [dataset.id, dataset.columns]);
 
   const slicedRows = useMemo(() => {
     if (!csvData || csvData.rows.length === 0) return [];
@@ -282,7 +245,7 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
     if (!csvData) return;
     const text = buildCsvDownloadText(csvData, slicedRows);
     triggerCsvDownload(
-      `${dataset.id}_${dataKind === "real" ? "real" : "synthetic_demo"}_explorer.csv`,
+      `${dataset.id}_real_explorer.csv`,
       text
     );
   };
@@ -313,7 +276,7 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
             </h1>
             <p className="text-xs text-slate-600 mt-1">
               所有統計數字皆於瀏覽器直接對目前{" "}
-              <strong>{dataKind === "real" ? "真實資料（__real=1）" : "合成展示資料（__synthetic=1）"}</strong>{" "}
+              <strong>真實資料（__real=1）</strong>{" "}
               計算；不使用 Gemini 產生任何數字或預測。
             </p>
           </div>
@@ -352,7 +315,7 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
                   title: `${dataset.display_name}・資料探索白話解釋`,
                   request: {
                     kind: "data",
-                    data_kind: dataKind,
+                    data_kind: "real",
                     dataset_id: dataset.id,
                     facts: buildExplorerFacts(
                       dataset.display_name,
@@ -586,16 +549,14 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
                 <Download className="h-3.5 w-3.5" />
                 下載 CSV（{csvData?.flagColumn ?? "__real"}）
               </button>
-              {dataKind === "real" && (
-                <button
-                  type="button"
-                  onClick={() => onNavigate("provenance")}
-                  className="inline-flex items-center gap-1 text-[#0B63CE] hover:underline"
-                >
-                  <FileCheck2 className="h-3.5 w-3.5" />
-                  來源聲明
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => onNavigate("provenance")}
+                className="inline-flex items-center gap-1 text-[#0B63CE] hover:underline"
+              >
+                <FileCheck2 className="h-3.5 w-3.5" />
+                來源聲明
+              </button>
             </div>
           </div>
 
@@ -886,7 +847,7 @@ export const ExplorerPage: React.FC<ExplorerPageProps> = ({
         open={tableOpen}
         onClose={() => setTableOpen(false)}
         title={`${dataset.display_name}・資料探索完整表格`}
-        subtitle={`資料類型：${dataKind === "real" ? "真實資料（__real=1）" : "合成展示資料（__synthetic=1）"}｜未降採樣原始數值`}
+        subtitle={"資料類型：真實資料（__real=1）｜未降採樣原始數值"}
         columns={["timestamp", ...selectedSensors, csvData?.flagColumn ?? "__real"]}
         rows={tableRowsForModal}
         onDownloadCsv={handleDownloadSliceCsv}

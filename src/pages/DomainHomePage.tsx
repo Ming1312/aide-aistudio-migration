@@ -26,7 +26,6 @@ import {
 import { MODEL_ORDER } from "../../contracts/types";
 import type {
   AnomaliesResponse,
-  DataKind,
   ForecastResponse,
   ModelKey,
   PrecomputedForecastTask,
@@ -57,7 +56,6 @@ import type {
 } from "../types/app";
 
 interface DomainHomePageProps {
-  dataKind: DataKind;
   dataset: RealDataset;
   anomalies: AnomaliesResponse | undefined;
   precomputedForecasts: PrecomputedForecasts | null;
@@ -76,7 +74,6 @@ const PERIOD_LABELS: Record<"t" | "v" | "h" | "l", string> = {
 };
 
 export const DomainHomePage: React.FC<DomainHomePageProps> = ({
-  dataKind,
   dataset,
   anomalies,
   precomputedForecasts,
@@ -276,22 +273,6 @@ export const DomainHomePage: React.FC<DomainHomePageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Synthetic Notice if user switched dataKind to synthetic */}
-      {dataKind === "synthetic" && (
-        <div className="p-4 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-950 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <strong>提醒：</strong>目前側邊欄資料類型為「合成展示」。場域看板僅展示真實感測資料與預計算輸出；若要操作合成 D1–D5 流程，請前往「資料更新」。
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigate("data_update")}
-            className="font-semibold text-amber-900 underline"
-          >
-            前往資料更新（合成展示）→
-          </button>
-        </div>
-      )}
-
       {/* Status Summary & KPI Strip */}
       <section className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

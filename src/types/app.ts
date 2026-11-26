@@ -3,7 +3,6 @@ import type {
   DataKind,
   DecisionExplainResponse,
   DecisionSupportResponse,
-  DemoBatch,
   ExplainRequest,
   ExplainResponse,
   ForecastResponse,
@@ -19,7 +18,6 @@ export type PageId =
   | "domain_home"
   | "live_forecast"
   | "decision_support"
-  | "data_update"
   | "explorer"
   | "model_lifecycle"
   // 羊舍決策 (Tier 2 — 只在羊舍顯示)
@@ -41,7 +39,6 @@ export interface NavItem {
   id: PageId;
   label: string;
   tier: "daily" | "decision" | "advanced";
-  syntheticAllowed?: boolean;
 }
 
 export interface ApiHealthStatus {
@@ -102,133 +99,6 @@ export interface ParsedCsvDataset {
   sensorHeaders: string[];
   flagColumn: "__real" | "__synthetic";
   rows: ParsedCsvRow[];
-}
-
-export interface VerifyBatchReport {
-  batch: DemoBatch;
-  rows: number;
-  start: string;
-  end: string;
-  duplicateTimestamps: number;
-  gapCount: number;
-  longestGapHours: number;
-  overlapWithCurrent: number;
-  allRowsHaveSyntheticFlag: boolean;
-  passed: boolean;
-  issues: string[];
-}
-
-export interface DemoVersionRecord {
-  version: string;
-  step: number;
-  code: string;
-  label: string;
-  committedAt: string;
-  rowCount: number;
-  rangeStart: string;
-  rangeEnd: string;
-  batchSha256: string;
-}
-
-export interface DemoAuditEntry {
-  id: string;
-  at: string;
-  action: "INIT" | "VERIFY" | "COMMIT" | "ROLLBACK";
-  detail: string;
-  version: string;
-}
-
-export interface DemoStepOutput {
-  step: number;
-  label: string;
-  import_ok: boolean;
-  import_s: number;
-  triage_s: number;
-  version: string;
-  rows_appended: number;
-  contains_synthetic: boolean;
-  n_data_quality: number;
-  n_signal: number;
-  n_environment_suppressed: number;
-  n_stale_tasks: number;
-  alerts_true: number;
-  alerts_false: number;
-  missed: Array<Record<string, unknown>>;
-  environment_events: Array<{ event: string; wrongly_alarmed: number }>;
-  false_alert_examples: Array<{
-    kind: string;
-    column: string;
-    start: string;
-    end: string;
-    matches: unknown[];
-  }>;
-  cards: Array<{
-    level: "ok" | "warn" | "alert" | string;
-    title: string;
-    has_evidence: boolean;
-    lead_sensor: string | null;
-  }>;
-  // 不建模場域沒有 guard、retrain_allowed、forecast 這三者
-  guard?: {
-    recommendation: string;
-    raw: string;
-    sensor_health: string;
-    seconds: number;
-  };
-  retrain_allowed?: boolean;
-  forecast?: {
-    task: string;
-    n_methods: number;
-    applicability: string;
-    seconds: number;
-    spread: number;
-  };
-}
-
-export interface DemoStepOutputsFile {
-  schema: string;
-  data_kind: "synthetic";
-  source: string;
-  warning: string;
-  domains: Record<
-    string,
-    {
-      stem: string;
-      task: string;
-      steps: DemoStepOutput[];
-    }
-  >;
-}
-
-export interface SyntheticTruthEvent {
-  event_id: string;
-  domain: string;
-  scenario: string;
-  type: string;
-  category: string;
-  columns: string[];
-  start: string;
-  end: string;
-  should_alert: boolean;
-  step: number;
-  description: string;
-  total_shift_sigma?: number;
-}
-
-export interface SyntheticTruthFile {
-  batch_id: string;
-  domain: string;
-  meta: Record<string, unknown>;
-  events: SyntheticTruthEvent[];
-}
-
-export interface DomainSyntheticState {
-  currentStep: number;
-  activeVersionIndex: number;
-  versions: DemoVersionRecord[];
-  auditLog: DemoAuditEntry[];
-  verifiedStep: number | null;
-  lastVerifyReport: VerifyBatchReport | null;
 }
 
 export type DecisionWithSource = DecisionSupportResponse & {

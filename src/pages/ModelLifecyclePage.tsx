@@ -12,7 +12,7 @@ const LIFECYCLE_STEPS = [
   {
     step: "1. 持續監測與資料健康度掃描",
     detail:
-      "每次新批次資料匯入後，先執行時間缺口、零值、卡值與多感測器漂移檢查（如資料更新頁 D1–D5 展示）。",
+      "每次新批次資料匯入後，先執行時間缺口、零值、卡值與多感測器漂移檢查。",
   },
   {
     step: "2. 守門建議判斷（fix_data_first vs consider_retraining）",
@@ -66,10 +66,6 @@ export const ModelLifecyclePage: React.FC<ModelLifecyclePageProps> = ({
             {engineOnline
               ? "目前連線為唯讀引擎（M1/M2）：模型重訓與版本啟用屬於後續寫入階段（M4），此處操作按鈕維持停用。"
               : "尚未連線到 Python 引擎：M1 階段無寫入端點，模型重訓、啟用與回復按鈕全部停用。"}
-          </div>
-          <div>
-            可先至「資料更新（合成展示）」實際操作 D3／D4 觸發{" "}
-            <code className="font-mono-tabular">fix_data_first</code> 守門擋下重訓的情境。
           </div>
         </div>
       </section>

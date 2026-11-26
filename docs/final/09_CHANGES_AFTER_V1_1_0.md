@@ -41,7 +41,7 @@
   - 預先準備的資料＝引擎預先算好的、真實歷史資料上每個任務最近 168 個預測起點。
   - 「匯入下一小時／6 小時／24 小時／自動播放」把展示游標往後推；畫面只看得到游標以前的資料；顯示「剛到達的真值 vs 當時的預測」、各方法到目前為止的 MAE（只算真值已抵達者）、展示用版本號與匯入紀錄；若該感測器有候選風險政策，同時顯示風險等級。
   - 版本號是記憶體計數，**不寫入任何資料庫**；不是引擎的即時預測；沒有連接任何設備。育成一廠北側沒有預先準備的預測資料，顯示原因。
-- 「資料更新（合成展示 D1–D5）」頁沒有變動。
+- 「資料更新（合成展示 D1–D5）」頁已依使用者要求刪除，見 §2c。
 
 程式：`src/lib/demoImport.ts`、`src/pages/DemoImportSimulation.tsx`（接在 `LiveForecastPage` 的離線區塊）。測試包含因果性（已揭露的真值其目標時間不晚於游標）。
 
@@ -65,13 +65,27 @@
 
 程式：`reference/adminAuth.ts`、`server/routes.ts`（`/admin/role`、`/admin/login`、`/admin/status`、寫入代理）、`src/components/AdminModal.tsx`、`src/components/Layout.tsx`、`.env.example`（新增 `ADMIN_ACCOUNT`、`ADMIN_DEMO_DISABLED`，只列名稱）；測試新增 6 項（`adminAuth.test.ts` 3 項、`routes.test.ts` 3 項）。
 
+## 2c　合成展示已刪除（2026-11-27）
+
+依使用者要求「把合成展示刪除」，移除：
+- 側邊欄「真實資料／合成展示」切換、合成橫幅與「此頁只有真實資料」提示（App 現在只有真實資料一種模式）；
+- 「資料更新（D1–D5）」頁（`DataUpdatePage.tsx`）與其合成狀態、版本／稽核／驗證流程；
+- 總覽、資料探索、場域看板中的合成分支（總覽不再有合成狀態卡）；
+- 合成資料檔 `public/data/demo_synthetic/`（35 個 CSV＋真值）與 `public/data/demo_precomputed/`（步驟輸出）、載入函式與型別、`buildSyntheticStepFacts` 與 `stepFactsNoGuard.test.ts`、`dataKindPolicy.ts`；
+- 舊網址 `?kind=synthetic&page=data_update` 會落到總覽。
+
+**刻意保留**（若要一併刪除請說明）：① 引擎連線時「即時預測」頁的引擎內建合成資料流與其橘色「合成」標示（那是引擎端行為，不是前端展示）；② §2 的「預先準備資料＋模擬新資料匯入」展示（用的是真實歷史資料上的預計算預測，不是合成資料）。
+
+**同步文件**：`docs/final/` 的 01／02／04／05／06／08 與 `BUILD_MODE_PROMPT.md`、`AI_STUDIO_PROJECT_BRIEF.md`、`docs/07_SYNTHETIC_DEMO_DATA.md` 仍描述已刪除的合成展示與 D1–D5，**已過時**，保留作為 v1.1.0 當時的紀錄；以本檔為準。
+
 ## 3　驗證狀態
 
 | 項目 | 結果 |
 |---|---|
 | `tsc --noEmit` | 0 錯誤 |
-| `npm test` | **86/86**（v1.1.0 的 63 ＋ 候選風險／展示匯入 10 ＋ 管理者 6 ＋ 回放引擎 7；`tsx --test`；與研究平台 pytest 數字無關） |
+| `npm test` | **83/83**（86 減去合成展示相關 3 項：`stepFactsNoGuard` 2 項、`dataKindPolicy` 1 項；`tsx --test`；與研究平台 pytest 數字無關） |
 | `vite build` | 成功 |
+| 合成展示刪除後瀏覽器實測 | 18 個導覽頁全數渲染、無錯誤頁、導覽沒有「資料更新」、沒有資料類型切換；舊合成網址落到總覽 |
 | 開發伺服器（引擎離線）瀏覽器實測 | 六個場域 × 五頁全部渲染無錯誤（北側的風險／預測／回放／處置頁顯示原因，異常診斷照常）；展示匯入按鈕、匯入紀錄、真值揭露、風險面板運作；375 px 無水平捲動；主控台只有引擎離線造成的 503 |
 | Docker CI、遠端驗收、AI Studio 內驗證 | **未做** |
 

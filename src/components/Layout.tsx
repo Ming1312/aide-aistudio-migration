@@ -22,17 +22,11 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import type { DataKind, RealDataset } from "../../contracts/types";
-import {
-  getEffectiveBannerKind,
-  isNavItemVisible,
-  isRealOnlyGuardedPage,
-} from "../lib/dataKindPolicy";
+import type { RealDataset } from "../../contracts/types";
 import type { LiveBannerKind } from "../lib/liveForecast";
 import type {
   AdminRoleStatus,
   ApiHealthStatus,
-  DomainSyntheticState,
   NavItem,
   PageId,
 } from "../types/app";
@@ -42,7 +36,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "domain_home", label: "場域看板", tier: "daily" },
   { id: "live_forecast", label: "即時預測", tier: "daily" },
   { id: "decision_support", label: "決策輔助", tier: "daily" },
-  { id: "data_update", label: "資料更新", tier: "daily", syntheticAllowed: true },
   { id: "explorer", label: "資料探索與分析", tier: "daily" },
   { id: "model_lifecycle", label: "模型維護", tier: "daily" },
   // 場域決策（七個場域一視同仁：研究預測＋假定門檻）
@@ -66,7 +59,6 @@ const NAV_ICONS: Record<PageId, React.ReactNode> = {
   domain_home: <Activity className="h-4 w-4" />,
   live_forecast: <Radio className="h-4 w-4" />,
   decision_support: <Sparkles className="h-4 w-4" />,
-  data_update: <Database className="h-4 w-4" />,
   explorer: <BarChart3 className="h-4 w-4" />,
   model_lifecycle: <Wrench className="h-4 w-4" />,
   decision_risk: <ShieldAlert className="h-4 w-4" />,
@@ -84,8 +76,6 @@ const NAV_ICONS: Record<PageId, React.ReactNode> = {
 };
 
 interface LayoutProps {
-  dataKind: DataKind;
-  onChangeDataKind: (kind: DataKind) => void;
   datasets: RealDataset[];
   datasetId: string;
   onChangeDataset: (id: string) => void;
@@ -94,14 +84,11 @@ interface LayoutProps {
   health: ApiHealthStatus | null;
   adminRole: AdminRoleStatus;
   onOpenAdmin: () => void;
-  syntheticState?: DomainSyntheticState;
   liveBannerKind?: LiveBannerKind;
   children: React.ReactNode;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
-  dataKind,
-  onChangeDataKind,
   datasets,
   datasetId,
   onChangeDataset,
@@ -110,7 +97,6 @@ export const Layout: React.FC<LayoutProps> = ({
   health,
   adminRole,
   onOpenAdmin,
-  syntheticState,
   liveBannerKind = "offline",
   children,
 }) => {
@@ -118,35 +104,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const activeDataset = datasets.find((d) => d.id === datasetId);
 
-  // 橫幅永遠由「該頁內容的資料種類」決定，而非全域切換
-  const effectiveBannerKind: DataKind =
-    activePage === "live_forecast"
-      ? liveBannerKind === "synthetic"
-        ? "synthetic"
-        : "real"
-      : getEffectiveBannerKind(activePage, dataKind);
-  const isBlockedRealOnlyInSynthetic =
-    dataKind === "synthetic" && isRealOnlyGuardedPage(activePage);
-
-  const currentSynthVersion =
-    syntheticState?.versions[syntheticState.activeVersionIndex];
-
   const periodOrVersionLabel =
     activePage === "live_forecast"
       ? liveBannerKind === "synthetic"
-        ? "即時預測資料流（合成模擬）"
+        ? "即時預測資料流（引擎合成模擬）"
         : liveBannerKind === "real"
           ? "即時預測資料流（真實匯入）"
           : "即時預測資料流（尚未連線）"
-      : isBlockedRealOnlyInSynthetic
-        ? "合成展示模式（此頁僅支援真實資料）"
-        : effectiveBannerKind === "synthetic"
-          ? currentSynthVersion
-            ? `合成版本：${currentSynthVersion.version}（D1–D${currentSynthVersion.step}｜${currentSynthVersion.rowCount} 列）`
-            : "合成展示版本（瀏覽器記憶體）"
-          : activeDataset
-            ? `真實資料期間：${activeDataset.time.start.slice(0, 10)} ～ ${activeDataset.time.end.slice(0, 10)}（${activeDataset.time.rows} 列）`
-            : "載入中…";
+      : activeDataset
+        ? `真實資料期間：${activeDataset.time.start.slice(0, 10)} ～ ${activeDataset.time.end.slice(0, 10)}（${activeDataset.time.rows} 列）`
+        : "載入中…";
 
   const handleSelectPage = (page: PageId) => {
     onNavigate(page);
@@ -205,37 +172,6 @@ export const Layout: React.FC<LayoutProps> = ({
           </button>
         </div>
 
-        {/* 資料類型常駐切換 */}
-        <div className="mt-3.5">
-          <div className="text-[11px] font-medium text-slate-500 mb-1.5">
-            資料類型（嚴格分開）
-          </div>
-          <div className="grid grid-cols-2 gap-1 p-1 rounded-md bg-slate-100 border border-slate-200">
-            <button
-              type="button"
-              onClick={() => onChangeDataKind("real")}
-              className={`py-1.5 px-2 rounded text-xs font-semibold transition-colors ${
-                dataKind === "real"
-                  ? "bg-[#0B63CE] text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              真實資料
-            </button>
-            <button
-              type="button"
-              onClick={() => onChangeDataKind("synthetic")}
-              className={`py-1.5 px-2 rounded text-xs font-semibold transition-colors ${
-                dataKind === "synthetic"
-                  ? "bg-amber-600 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              合成展示
-            </button>
-          </div>
-        </div>
-
         {/* 場域選擇 */}
         <div className="mt-3">
           <label
@@ -263,24 +199,15 @@ export const Layout: React.FC<LayoutProps> = ({
       <nav className="flex-1 overflow-y-auto px-2.5 py-4" aria-label="主導覽">
         {renderNavSection(
           "日常使用",
-          NAV_ITEMS.filter(
-            (i) =>
-              i.tier === "daily" &&
-              isNavItemVisible(i.id, i.tier, dataKind, datasetId)
-          )
+          NAV_ITEMS.filter((i) => i.tier === "daily")
         )}
-        {dataKind === "real" &&
-          renderNavSection(
-            "場域決策（假定門檻）",
-            NAV_ITEMS.filter((i) => i.tier === "decision")
-          )}
+        {renderNavSection(
+          "場域決策（假定門檻）",
+          NAV_ITEMS.filter((i) => i.tier === "decision")
+        )}
         {renderNavSection(
           "進階研究",
-          NAV_ITEMS.filter(
-            (i) =>
-              i.tier === "advanced" &&
-              isNavItemVisible(i.id, i.tier, dataKind, datasetId)
-          )
+          NAV_ITEMS.filter((i) => i.tier === "advanced")
         )}
       </nav>
 
@@ -444,7 +371,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 </div>
               </div>
             )
-          ) : effectiveBannerKind === "real" ? (
+          ) : (
             <div className="bg-[#EFF6FF] border-t border-b border-blue-200">
               <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-950">
                 <div className="flex items-start sm:items-center gap-2">
@@ -466,33 +393,6 @@ export const Layout: React.FC<LayoutProps> = ({
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="bg-amber-50 border-t border-b border-amber-300">
-              <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950">
-                <div className="flex items-start sm:items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
-                  <span>
-                    <strong className="font-semibold">
-                      合成（模擬）展示資料
-                    </strong>
-                    ：不是真實資料，不能用來證明任何模型在真實世界的表現。（每列皆標記{" "}
-                    <code className="font-mono-tabular bg-amber-100 px-1 rounded">
-                      __synthetic=1
-                    </code>
-                    ）
-                  </span>
-                </div>
-                {activePage !== "data_update" && (
-                  <button
-                    type="button"
-                    onClick={() => onChangeDataKind("real")}
-                    className="text-amber-900 font-semibold hover:underline shrink-0"
-                  >
-                    切回真實資料 →
-                  </button>
-                )}
-              </div>
-            </div>
           )}
         </header>
 
@@ -505,7 +405,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <footer className="border-t border-slate-200 bg-white mt-8">
           <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-4 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
             <div>
-              AIDE 智慧環境監測與決策平台｜真實與合成資料嚴格分離｜時間戳記：未標示時區（本地時間）｜感測器單位為推測，尚未經資料提供者確認
+              AIDE 智慧環境監測與決策平台｜時間戳記：未標示時區（本地時間）｜感測器單位為推測，尚未經資料提供者確認
             </div>
             <div>
               預計算結果為研究預測（探索性，未經獨立前瞻驗證）；系統不控制任何設備

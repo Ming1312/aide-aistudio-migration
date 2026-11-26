@@ -4,40 +4,29 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
-  Database,
   HelpCircle,
   Play,
   RefreshCw,
 } from "lucide-react";
 import type {
   AnomaliesResponse,
-  DataKind,
-  DemoManifest,
   RealDataset,
 } from "../../contracts/types";
-import {
-  fetchOverviewStatus,
-  loadRealCsv,
-  loadSyntheticCsv,
-} from "../lib/dataLoader";
+import { fetchOverviewStatus, loadRealCsv } from "../lib/dataLoader";
 import {
   formatOverviewColumnsPreview,
   formatOverviewKindsSummary,
 } from "../lib/overviewFormat";
 import type {
   CheckedDomainSummary,
-  DomainSyntheticState,
   OverviewStatusResponse,
   OverviewWindowHours,
   PageId,
 } from "../types/app";
 
 interface OverviewPageProps {
-  dataKind: DataKind;
   datasets: RealDataset[];
   anomaliesMap: Record<string, AnomaliesResponse>;
-  demoManifest: DemoManifest | null;
-  syntheticStates: Record<string, DomainSyntheticState>;
   checkedDomains: Record<string, CheckedDomainSummary>;
   overviewStatus: OverviewStatusResponse | null;
   overviewWindowHours: OverviewWindowHours;
@@ -65,11 +54,8 @@ function getCommonCauseHint(kind: string): string {
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
-  dataKind,
   datasets,
   anomaliesMap,
-  demoManifest,
-  syntheticStates,
   checkedDomains,
   overviewStatus,
   overviewWindowHours,
@@ -103,81 +89,41 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         setProgressIdx(i + 1);
         setProgressName(ds.display_name);
 
-        if (dataKind === "real") {
-          const parsed = await loadRealCsv(ds.id);
-          let totalCells = 0;
-          let missingCells = 0;
-          for (const row of parsed.rows) {
-            for (const s of parsed.sensorHeaders) {
-              totalCells += 1;
-              if (row.values[s] === null || row.values[s] === undefined) {
-                missingCells += 1;
-              }
+        const parsed = await loadRealCsv(ds.id);
+        let totalCells = 0;
+        let missingCells = 0;
+        for (const row of parsed.rows) {
+          for (const s of parsed.sensorHeaders) {
+            totalCells += 1;
+            if (row.values[s] === null || row.values[s] === undefined) {
+              missingCells += 1;
             }
           }
-          const missingRatePct =
-            totalCells > 0 ? (missingCells / totalCells) * 100 : 0;
-          const anom = anomaliesMap[ds.id];
-          const nAnomalies = anom?.n_events ?? 0;
-          const nTasks = ds.forecast_tasks.filter((t) => t.enabled).length;
-          const latestTs =
-            parsed.rows[parsed.rows.length - 1]?.timestamp ?? ds.time.end;
-
-          onUpdateCheckedDomain(`real:${ds.id}`, {
-            datasetId: ds.id,
-            checkedAt: new Date().toLocaleTimeString("zh-Hant", {
-              hour12: false,
-            }),
-            rows: parsed.rows.length,
-            missingRatePct,
-            nAnomalies,
-            nTasks,
-            latestTimestamp: latestTs,
-            statusLabel: "已檢查",
-          });
-        } else {
-          const synthDomain = demoManifest?.domains.find((d) => d.id === ds.id);
-          const st = syntheticStates[ds.id];
-          const step = st?.currentStep ?? 1;
-          const batches = synthDomain?.batches.slice(0, step) ?? [];
-          let totalRows = 0;
-          let latestTs = "";
-          let totalCells = 0;
-          let missingCells = 0;
-          for (const b of batches) {
-            const parsed = await loadSyntheticCsv(ds.id, b.code);
-            totalRows += parsed.rows.length;
-            latestTs = parsed.rows[parsed.rows.length - 1]?.timestamp ?? latestTs;
-            for (const row of parsed.rows) {
-              for (const s of parsed.sensorHeaders) {
-                totalCells += 1;
-                if (row.values[s] === null || row.values[s] === undefined) {
-                  missingCells += 1;
-                }
-              }
-            }
-          }
-          const missingRatePct =
-            totalCells > 0 ? (missingCells / totalCells) * 100 : 0;
-          onUpdateCheckedDomain(`synthetic:${ds.id}`, {
-            datasetId: ds.id,
-            checkedAt: new Date().toLocaleTimeString("zh-Hant", {
-              hour12: false,
-            }),
-            rows: totalRows,
-            missingRatePct,
-            nAnomalies: 0,
-            nTasks: 0,
-            latestTimestamp: latestTs || "-",
-            statusLabel: `已檢查・合成展示 D1–D${step}`,
-          });
         }
+        const missingRatePct =
+          totalCells > 0 ? (missingCells / totalCells) * 100 : 0;
+        const anom = anomaliesMap[ds.id];
+        const nAnomalies = anom?.n_events ?? 0;
+        const nTasks = ds.forecast_tasks.filter((t) => t.enabled).length;
+        const latestTs =
+          parsed.rows[parsed.rows.length - 1]?.timestamp ?? ds.time.end;
+
+        onUpdateCheckedDomain(`real:${ds.id}`, {
+          datasetId: ds.id,
+          checkedAt: new Date().toLocaleTimeString("zh-Hant", {
+            hour12: false,
+          }),
+          rows: parsed.rows.length,
+          missingRatePct,
+          nAnomalies,
+          nTasks,
+          latestTimestamp: latestTs,
+          statusLabel: "已檢查",
+        });
       }
 
-      if (dataKind === "real") {
-        const statusRes = await fetchOverviewStatus(overviewWindowHours);
-        onUpdateOverviewStatus(statusRes);
-      }
+      const statusRes = await fetchOverviewStatus(overviewWindowHours);
+      onUpdateOverviewStatus(statusRes);
 
       setElapsedSec(Number(((Date.now() - startMs) / 1000).toFixed(1)));
     } catch (err) {
@@ -206,7 +152,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   };
 
   const attentionItems = useMemo(() => {
-    if (dataKind !== "real") return [];
     const list: Array<{
       datasetId: string;
       datasetName: string;
@@ -238,7 +183,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       }
     }
     return list;
-  }, [dataKind, datasets, anomaliesMap]);
+  }, [datasets, anomaliesMap]);
 
   return (
     <div className="space-y-6 min-w-0">
@@ -249,9 +194,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             七場域環境監測總覽
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            {dataKind === "real"
-              ? "目前檢視「真實感測資料」（7 個場域）。未執行檢查前各場域維持「尚未檢查」狀態，不顯示任何結論；不代表設備正常。"
-              : "目前檢視「合成展示資料」（只用於示範資料更新流程；不得與真實資料混合）。"}
+            目前檢視「真實感測資料」（7 個場域）。未執行檢查前各場域維持「尚未檢查」狀態，不顯示任何結論；不代表設備正常。
           </p>
         </div>
 
@@ -316,7 +259,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       )}
 
       {/* Checked Overview Summary + Window Switcher (Real mode after checking) */}
-      {dataKind === "real" && overviewStatus && (
+      {overviewStatus && (
         <section
           aria-label="檢查結果摘要與時間範圍"
           className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 space-y-3 min-w-0"
@@ -387,12 +330,9 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       <section aria-label="七場域摘要卡片" className="min-w-0">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 min-w-0">
           {datasets.map((ds) => {
-            const cacheKey = `${dataKind}:${ds.id}`;
+            const cacheKey = `real:${ds.id}`;
             const checked = checkedDomains[cacheKey];
-            const domainStatus =
-              dataKind === "real"
-                ? overviewStatus?.datasets?.[ds.id]
-                : undefined;
+            const domainStatus = overviewStatus?.datasets?.[ds.id];
             const anom = anomaliesMap[ds.id];
             const enabledTasks = ds.forecast_tasks.filter((t) => t.enabled).length;
             const meanMissing =
@@ -402,11 +342,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                   100
                 : 0;
 
-            const synthDomain = demoManifest?.domains.find((d) => d.id === ds.id);
-            const synthState = syntheticStates[ds.id];
-            const synthVer =
-              synthState?.versions[synthState.activeVersionIndex];
-
             const kindBadges = domainStatus
               ? formatOverviewKindsSummary(domainStatus.kinds)
               : [];
@@ -414,8 +349,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               ? formatOverviewColumnsPreview(domainStatus.columns, 4)
               : "";
 
-            const isChecked =
-              dataKind === "real" ? Boolean(domainStatus) : Boolean(checked);
+            const isChecked = Boolean(domainStatus);
 
             return (
               <article
@@ -454,64 +388,39 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                     </div>
                   )}
 
-                  {dataKind === "real" ? (
-                    <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs pt-2 border-t border-slate-100 min-w-0">
-                      <div className="min-w-0">
-                        <dt className="text-slate-500">資料期間（未標時區）</dt>
-                        <dd className="font-mono-tabular text-slate-800 mt-0.5 break-words">
-                          {ds.time.start.slice(0, 10)} ～ {ds.time.end.slice(0, 10)}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-slate-500">資料列數／感測器數</dt>
-                        <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                          {ds.time.rows} 列 · {ds.columns.length} 欄
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-slate-500">平均缺值率／時間缺口</dt>
-                        <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                          {(checked ? checked.missingRatePct : meanMissing).toFixed(1)}% ·{" "}
-                          {ds.time.n_gaps ?? 0} 段
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-slate-500">預測任務／候選事件</dt>
-                        <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                          {ds.id === "rearing_plant_1_north"
-                            ? "0 任務（不建模型）"
-                            : `${enabledTasks} 任務`}{" "}
-                          · {anom?.n_events ?? 0} 候選
-                        </dd>
-                      </div>
-                    </dl>
-                  ) : (
-                    <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs pt-2 border-t border-slate-100 min-w-0">
-                      <div className="min-w-0">
-                        <dt className="text-slate-500">目前合成版本</dt>
-                        <dd className="font-mono-tabular text-amber-800 font-medium mt-0.5">
-                          {synthVer?.version ?? "D1"}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-slate-500">目前步數／列數</dt>
-                        <dd className="font-mono-tabular text-slate-800 mt-0.5">
-                          D1–D{synthState?.currentStep ?? 1} ·{" "}
-                          {synthVer?.rowCount ?? 168} 列
-                        </dd>
-                      </div>
-                      <div className="col-span-2 min-w-0">
-                        <dt className="text-slate-500">展示批次範圍</dt>
-                        <dd className="font-mono-tabular text-slate-700 mt-0.5 break-words">
-                          {synthDomain?.batches[0]?.start.slice(0, 10)} ～{" "}
-                          {synthVer?.rangeEnd.slice(0, 10) ?? "-"}（__synthetic=1）
-                        </dd>
-                      </div>
-                    </dl>
-                  )}
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs pt-2 border-t border-slate-100 min-w-0">
+                    <div className="min-w-0">
+                      <dt className="text-slate-500">資料期間（未標時區）</dt>
+                      <dd className="font-mono-tabular text-slate-800 mt-0.5 break-words">
+                        {ds.time.start.slice(0, 10)} ～ {ds.time.end.slice(0, 10)}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-slate-500">資料列數／感測器數</dt>
+                      <dd className="font-mono-tabular text-slate-800 mt-0.5">
+                        {ds.time.rows} 列 · {ds.columns.length} 欄
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-slate-500">平均缺值率／時間缺口</dt>
+                      <dd className="font-mono-tabular text-slate-800 mt-0.5">
+                        {(checked ? checked.missingRatePct : meanMissing).toFixed(1)}% ·{" "}
+                        {ds.time.n_gaps ?? 0} 段
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-slate-500">預測任務／候選事件</dt>
+                      <dd className="font-mono-tabular text-slate-800 mt-0.5">
+                        {ds.id === "rearing_plant_1_north"
+                          ? "0 任務（不建模型）"
+                          : `${enabledTasks} 任務`}{" "}
+                        · {anom?.n_events ?? 0} 候選
+                      </dd>
+                    </div>
+                  </dl>
 
                   {/* Real mode status result block (ONLY rendered after clicking check) */}
-                  {dataKind === "real" && domainStatus && (
+                  {domainStatus && (
                     domainStatus.status === "has_issue" ? (
                       <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1.5 text-xs text-amber-950 min-w-0">
                         <div className="font-semibold text-amber-900 break-words">
@@ -548,51 +457,39 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                     )
                   )}
 
-                  {dataKind === "synthetic" && checked && (
-                    <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 break-words">
-                      檢查結果：{checked.statusLabel}
-                    </div>
-                  )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        onSelectDomainAndNavigate(
-                          ds.id,
-                          dataKind === "synthetic" ? "data_update" : "domain_home"
-                        )
-                      }
+                      onClick={() => onSelectDomainAndNavigate(ds.id, "domain_home")}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-[#0B63CE] hover:underline"
                     >
-                      {dataKind === "synthetic" ? "前往資料更新展示" : "進入場域看板"}
+                      進入場域看板
                       <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {dataKind === "real" && (
-                    <div className="flex items-center gap-3 text-xs">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onSelectDomainAndNavigate(ds.id, "decision_support")
-                        }
-                        className="text-slate-600 hover:text-[#0B63CE] font-medium"
-                      >
-                        決策輔助
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onSelectDomainAndNavigate(ds.id, "explorer")
-                        }
-                        className="text-slate-600 hover:text-[#0B63CE] font-medium"
-                      >
-                        探索資料
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 text-xs">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectDomainAndNavigate(ds.id, "decision_support")
+                      }
+                      className="text-slate-600 hover:text-[#0B63CE] font-medium"
+                    >
+                      決策輔助
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectDomainAndNavigate(ds.id, "explorer")
+                      }
+                      className="text-slate-600 hover:text-[#0B63CE] font-medium"
+                    >
+                      探索資料
+                    </button>
+                  </div>
                 </div>
               </article>
             );
@@ -612,70 +509,58 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               列舉各場域偵測器分數最高的候選事件，並拆分為「發生什麼／可能原因／建議怎麼做／資料依據」四段；所有候選皆需人工確認。
             </p>
           </div>
-          {dataKind === "synthetic" && (
-            <span className="text-xs text-amber-800 font-medium inline-flex items-center gap-1">
-              <Database className="h-3.5 w-3.5" />
-              合成模式請至「資料更新」檢視 D1–D5 稽核結果
-            </span>
-          )}
         </div>
 
-        {dataKind === "real" ? (
-          attentionItems.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 min-w-0">
-              {attentionItems.map((item, idx) => (
-                <div
-                  key={`${item.datasetId}-${idx}`}
-                  className="border border-slate-200 rounded-md p-3.5 bg-slate-50/70 space-y-2 text-xs min-w-0"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onSelectDomainAndNavigate(item.datasetId, "domain_home")
-                      }
-                      className="font-semibold text-sm text-[#0B63CE] hover:underline text-left break-words min-w-0"
-                    >
-                      {item.datasetName}
-                    </button>
-                    <span className="text-amber-800 font-medium shrink-0">
-                      候選事件・{item.kindZh}
-                    </span>
-                  </div>
+        {attentionItems.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 min-w-0">
+            {attentionItems.map((item, idx) => (
+              <div
+                key={`${item.datasetId}-${idx}`}
+                className="border border-slate-200 rounded-md p-3.5 bg-slate-50/70 space-y-2 text-xs min-w-0"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectDomainAndNavigate(item.datasetId, "domain_home")
+                    }
+                    className="font-semibold text-sm text-[#0B63CE] hover:underline text-left break-words min-w-0"
+                  >
+                    {item.datasetName}
+                  </button>
+                  <span className="text-amber-800 font-medium shrink-0">
+                    候選事件・{item.kindZh}
+                  </span>
+                </div>
 
-                  <div className="space-y-1.5 text-slate-700 leading-relaxed break-words">
-                    <div>
-                      <strong className="text-slate-900">發生什麼：</strong>
-                      偵測器在「{item.column}」標出「{item.kindZh}」候選事件（
-                      {item.note}）。這是候選，不是設備故障判定。
-                    </div>
-                    <div>
-                      <strong className="text-slate-900">可能原因：</strong>
-                      {getCommonCauseHint(item.kind)}
-                    </div>
-                    <div>
-                      <strong className="text-slate-900">建議怎麼做：</strong>
-                      請現場人員確認感測器來源與現場作業紀錄，並以人工複測對照（本系統不控制任何設備）。
-                    </div>
-                    <div className="font-mono-tabular text-slate-600 pt-1 border-t border-slate-200 break-words">
-                      <strong className="text-slate-800 font-sans">
-                        資料依據：
-                      </strong>
-                      感測器 {item.column} ｜ 起訖 {item.start} ～ {item.end} ｜
-                      持續 {item.hours} 小時 ｜ 分數強度 {item.score.toFixed(2)}
-                    </div>
+                <div className="space-y-1.5 text-slate-700 leading-relaxed break-words">
+                  <div>
+                    <strong className="text-slate-900">發生什麼：</strong>
+                    偵測器在「{item.column}」標出「{item.kindZh}」候選事件（
+                    {item.note}）。這是候選，不是設備故障判定。
+                  </div>
+                  <div>
+                    <strong className="text-slate-900">可能原因：</strong>
+                    {getCommonCauseHint(item.kind)}
+                  </div>
+                  <div>
+                    <strong className="text-slate-900">建議怎麼做：</strong>
+                    請現場人員確認感測器來源與現場作業紀錄，並以人工複測對照（本系統不控制任何設備）。
+                  </div>
+                  <div className="font-mono-tabular text-slate-600 pt-1 border-t border-slate-200 break-words">
+                    <strong className="text-slate-800 font-sans">
+                      資料依據：
+                    </strong>
+                    感測器 {item.column} ｜ 起訖 {item.start} ～ {item.end} ｜
+                    持續 {item.hours} 小時 ｜ 分數強度 {item.score.toFixed(2)}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-xs text-slate-500 py-4">
-              目前尚未載入候選事件或各場域無候選事件。
-            </div>
-          )
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="p-4 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-900">
-            合成資料模式下，「需要注意的事」不會混入真實場域的異常偵測結果；請點選任一場域前往「資料更新」逐週匯入 D1→D5 觀察模擬變化。
+          <div className="text-xs text-slate-500 py-4">
+            目前尚未載入候選事件或各場域無候選事件。
           </div>
         )}
       </section>

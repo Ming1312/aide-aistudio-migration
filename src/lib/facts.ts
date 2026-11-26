@@ -1,11 +1,9 @@
 import type {
   AnomaliesResponse,
-  DataKind,
   Fact,
   MODEL_ORDER,
   PrecomputedForecastTask,
 } from "../../contracts/types";
-import type { DemoStepOutput } from "../types/app";
 import type { ColumnStats } from "./csv";
 
 export function buildForecastFacts(
@@ -123,37 +121,4 @@ export function buildExplorerFacts(
     }
   });
   return facts;
-}
-
-export function buildSyntheticStepFacts(
-  domainName: string,
-  stepOut: DemoStepOutput,
-  batchLabel: string,
-  version: string,
-  dataKind: DataKind = "synthetic"
-): Fact[] {
-  return [
-    {
-      id: "f1",
-      text: `合成展示資料（${dataKind}）：${domainName} 步驟 D${stepOut.step}「${batchLabel}」，版本 ${version}，累積列數 ${stepOut.rows_appended}`,
-      value: stepOut.rows_appended,
-      unit: "列",
-    },
-    {
-      id: "f2",
-      text: `品質問題數 ${stepOut.n_data_quality}、異常訊號數 ${stepOut.n_signal}、環境變化抑制 ${stepOut.n_environment_suppressed}`,
-      value: stepOut.n_signal,
-      unit: "筆",
-    },
-    {
-      id: "f3",
-      text: stepOut.guard
-        ? `守門建議：${stepOut.guard.recommendation}（感測器健康度 ${stepOut.guard.sensor_health}、允許重訓：${stepOut.retrain_allowed ? "是" : "否"}）`
-        : "此場域資料不足，系統不建立預測模型，沒有守門建議與重訓資訊",
-    },
-    ...stepOut.cards.map((c, idx) => ({
-      id: `f${idx + 4}`,
-      text: `系統卡片（${c.level}）：${c.title}${c.lead_sensor ? `（主要感測器 ${c.lead_sensor}）` : ""}`,
-    })),
-  ];
 }

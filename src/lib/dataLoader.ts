@@ -1,8 +1,6 @@
 import type {
   AnomaliesResponse,
-  DataKind,
   DecisionExplainResponse,
-  DemoManifest,
   ExplainRequest,
   ExplainResponse,
   ForecastRequest,
@@ -26,11 +24,9 @@ import type {
   AdminStatusInfo,
   ApiHealthStatus,
   DecisionWithSource,
-  DemoStepOutputsFile,
   OverviewStatusResponse,
   OverviewWindowHours,
   ParsedCsvDataset,
-  SyntheticTruthFile,
 } from "../types/app";
 import { parseCsvText } from "./csv";
 import {
@@ -114,25 +110,6 @@ export function loadPrecomputedFormalSheep(): Promise<PrecomputedFormalSheep> {
   );
 }
 
-export function loadDemoManifest(): Promise<DemoManifest> {
-  return fetchJsonCached<DemoManifest>("/data/demo_synthetic/manifest.json");
-}
-
-export function loadDemoStepOutputs(): Promise<DemoStepOutputsFile> {
-  return fetchJsonCached<DemoStepOutputsFile>(
-    "/data/demo_precomputed/step_outputs.json"
-  );
-}
-
-export function loadSyntheticTruth(
-  datasetId: string,
-  stepCode: string
-): Promise<SyntheticTruthFile> {
-  return fetchJsonCached<SyntheticTruthFile>(
-    `/data/demo_synthetic/truth/${encodeURIComponent(datasetId)}_${encodeURIComponent(stepCode)}.truth.json`
-  );
-}
-
 export function loadRealCsv(datasetId: string): Promise<ParsedCsvDataset> {
   const key = `real:${datasetId}`;
   const existing = csvCache.get(key);
@@ -143,24 +120,6 @@ export function loadRealCsv(datasetId: string): Promise<ParsedCsvDataset> {
       const text = await res.text();
       return parseCsvText(text, "__real");
     });
-  csvCache.set(key, promise);
-  return promise;
-}
-
-export function loadSyntheticCsv(
-  datasetId: string,
-  stepCode: string
-): Promise<ParsedCsvDataset> {
-  const key = `synth:${datasetId}:${stepCode}`;
-  const existing = csvCache.get(key);
-  if (existing) return existing;
-  const promise = fetch(
-    `/data/demo_synthetic/${encodeURIComponent(datasetId)}/${encodeURIComponent(stepCode)}.csv`
-  ).then(async (res) => {
-    if (!res.ok) throw new Error(`無法載入合成資料 CSV（HTTP ${res.status}）`);
-    const text = await res.text();
-    return parseCsvText(text, "__synthetic");
-  });
   csvCache.set(key, promise);
   return promise;
 }
@@ -494,8 +453,4 @@ export function postLiveSimTick(
       body: JSON.stringify(payload),
     }
   );
-}
-
-export function getDataKindLabel(kind: DataKind): string {
-  return kind === "real" ? "真實資料" : "合成資料";
 }
