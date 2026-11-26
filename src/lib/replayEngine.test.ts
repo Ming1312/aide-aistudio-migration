@@ -16,6 +16,7 @@ import {
 const forecasts = JSON.parse(
   readFileSync(new URL("../../public/data/real_public/precomputed/forecasts.json", import.meta.url), "utf8")
 ) as PrecomputedForecasts;
+const POLICIES_WITH_TASKS = Object.values(CANDIDATE_POLICIES).filter((p) => findTask(forecasts, p.datasetId, p.sensor, 3));
 
 test("conformalQuantile：有限樣本修正；樣本不足時回最大值並標示不精確", () => {
   assert.equal(conformalQuantile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.9).q, 10);
@@ -42,7 +43,7 @@ test("pickCutoff：事件不足用預設；足夠時以召回率 0.9 選線", ()
 });
 
 test("回放列：每個場域政策都產生 168 列；前段沒有足夠已抵達殘差就不給區間；其後有區間且 lower<point<upper", () => {
-  for (const p of Object.values(CANDIDATE_POLICIES)) {
+  for (const p of POLICIES_WITH_TASKS) {
     const t = findTask(forecasts, p.datasetId, p.sensor, 3)!;
     const rows = buildReplayRows(t, p, t.best_baseline, []);
     assert.equal(rows.length, t.points.length);
@@ -92,7 +93,7 @@ test("可信度：觀測值連續相同或有候選事件會導向「先處理�
 });
 
 test("回放摘要：混淆矩陣加總等於可用列數；與反應式並排；事件數一致", () => {
-  for (const p of Object.values(CANDIDATE_POLICIES)) {
+  for (const p of POLICIES_WITH_TASKS) {
     const t = findTask(forecasts, p.datasetId, p.sensor, 3)!;
     const s = summarizeReplay(buildReplayRows(t, p, t.best_baseline, []));
     const sum = (c: { tp: number; fn: number; fp: number; tn: number }) => c.tp + c.fn + c.fp + c.tn;

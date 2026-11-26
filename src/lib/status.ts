@@ -68,7 +68,9 @@ export interface DomainStatus {
   currentLevel: Safety;
   horizons: HorizonView[];
   level: Safety;
-  source: "precomputed" | "import" | "engine";
+  source: "precomputed" | "import" | "engine" | "baseline";
+  /** 資料不完整時的提醒（例如只有 387 列、涵蓋 17.6%）；完整時為 null */
+  incomplete: string | null;
   /** 引擎資料流是模擬（合成）資料時為 true */
   synthetic: boolean;
   /** 引擎即時資料的觀測歷史（決策頁圖用） */
@@ -119,6 +121,10 @@ export interface StatusInput {
   overrides?: ThresholdOverrides;
   /** 有匯入資料時傳入「原始＋匯入」合併後的列；沒有則用預計算預測 */
   liveRows?: ParsedCsvRow[] | null;
+  /** liveRows 只是原始資料（沒有比內建資料更新的匯入）：只在沒有預計算預測時用來建立簡易預測 */
+  liveIsBase?: boolean;
+  /** 建立簡易預測前已略過的斷電／歸零列數（見 maskOutageRows） */
+  maskedRows?: number;
   /** 連到本機引擎時的即時預測（優先順序：匯入資料 > 引擎 > 預計算） */
   engine?: EngineDomain | null;
 }
@@ -132,8 +138,9 @@ export function taskFor(
   input: StatusInput,
   policy: CandidatePolicy,
   horizon: number
-): { task: PrecomputedForecastTask | null; source: "precomputed" | "import" } {
-  if (input.liveRows && input.liveRows.length > 0) {
+): { task: PrecomputedForecastTask | null; source: "precomputed" | "import" | "baseline" } {
+  const pre = findTask(input.forecasts, input.dataset.id, policy.sensor, horizon);
+  if (input.liveRows && input.liveRows.length > 0 && (!input.liveIsBase || !pre)) {
     const t = buildLiveTask(
       input.dataset.id,
       policy.sensor,
@@ -141,9 +148,9 @@ export function taskFor(
       horizon,
       toHourly(input.liveRows, policy.sensor)
     );
-    if (t) return { task: t, source: "import" };
+    if (t) return { task: t, source: input.liveIsBase ? "baseline" : "import" };
   }
-  return { task: findTask(input.forecasts, input.dataset.id, policy.sensor, horizon), source: "precomputed" };
+  return { task: pre, source: "precomputed" };
 }
 
 export function computeDomainStatus(input: StatusInput): DomainStatus {
@@ -164,6 +171,7 @@ export function computeDomainStatus(input: StatusInput): DomainStatus {
     horizons: [],
     level: "none",
     source: "precomputed",
+    incomplete: null,
     synthetic: false,
     reliability: "reliable",
     reliabilityFindings: [],
@@ -176,14 +184,14 @@ export function computeDomainStatus(input: StatusInput): DomainStatus {
   const policy = o ? applyOverride(base, o.caution, o.alarm) : base;
   const events = input.anomalies?.events ?? [];
 
-  const hasImport = !!input.liveRows && input.liveRows.length > 0;
+  const hasImport = !!input.liveRows && input.liveRows.length > 0 && !input.liveIsBase;
   if (!hasImport && input.engine) {
     const fromEngine = computeFromEngine(input, policy, empty);
     if (fromEngine) return fromEngine;
   }
 
   const horizons: HorizonView[] = [];
-  let source: "precomputed" | "import" = "precomputed";
+  let source: "precomputed" | "import" | "baseline" = "precomputed";
   let lastRow: ReplayRow | null = null;
   let spark: Array<number | null> = [];
   for (const h of STATUS_HORIZONS) {
@@ -225,6 +233,7 @@ export function computeDomainStatus(input: StatusInput): DomainStatus {
     horizons,
     level,
     source,
+    incomplete: source === "baseline" ? incompleteNote(input.dataset, input.maskedRows) : null,
     synthetic: false,
     reliability: lastRow.reliability,
     reliabilityFindings: lastRow.reliabilityFindings,
@@ -309,6 +318,7 @@ export function computeFromEngine(input: StatusInput, policy: CandidatePolicy, e
     horizons,
     level,
     source: "engine",
+    incomplete: null,
     synthetic,
     history: hist.map((p) => ({ t: p.time, v: typeof p.value === "number" ? p.value : null })),
     reliability,
@@ -317,6 +327,23 @@ export function computeFromEngine(input: StatusInput, policy: CandidatePolicy, e
     alert: false,
     spark: hist.slice(-48).map((p) => (typeof p.value === "number" ? p.value : null)),
   };
+}
+
+function incompleteNote(ds: RealDataset, maskedRows = 0): string {
+  const exp = ds.time.expected_hours;
+  const pct = exp ? `，涵蓋 ${((100 * ds.time.rows) / exp).toFixed(1)}%` : "";
+  const masked = maskedRows > 0 ? `；已略過 ${maskedRows} 列斷電／歸零資料，依最後有效資料分析` : "";
+  return `資料不完整：只有 ${ds.time.rows} 列${pct}${masked}；使用簡易基準預測，僅供參考`;
+}
+
+/** 把偵測器標出的「整列歸零（斷電／斷線）」時段從原始資料拿掉（視為缺值），讓簡易預測依最後有效資料分析。 */
+export function maskOutageRows(rows: ParsedCsvRow[], events: AnomaliesResponse["events"]): { rows: ParsedCsvRow[]; masked: number } {
+  const spans = events
+    .filter((e) => e.kind === "outage_zero_rows")
+    .map((e) => [Date.parse(e.start.replace(" ", "T")), Date.parse(e.end.replace(" ", "T"))] as const);
+  if (spans.length === 0) return { rows, masked: 0 };
+  const kept = rows.filter((r) => !spans.some(([a, b]) => r.tsMs >= a && r.tsMs <= b));
+  return { rows: kept, masked: rows.length - kept.length };
 }
 
 function shiftDays(ts: string, days: number): string {

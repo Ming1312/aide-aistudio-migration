@@ -168,13 +168,31 @@ export const CANDIDATE_POLICIES: Record<string, CandidatePolicy> = {
       dataSuspect: ["先處理資料：TEMP 近期有卡值事件，請先檢查感測器"],
     },
   },
+  rearing_plant_1_north: {
+    datasetId: "rearing_plant_1_north",
+    sensor: "溫度",
+    unit: "°C",
+    direction: "above",
+    caution: 30,
+    alarm: 33,
+    basis:
+      "與育成一廠同類的廠房高溫風險；此場域資料很不完整（387 列、涵蓋 17.6%），沒有預計算的研究預測，改用瀏覽器內的簡易基準預測。30／33 °C 是假定值，不是設施或動物的確認門檻。",
+    actions: {
+      caution: [
+        "確認通風與遮蔽狀況（現場確認，系統不控制設備）",
+        "通知負責人留意接下來的溫度走勢",
+      ],
+      alarm: [
+        "通知現場人員確認通風與降溫措施是否需要人工處置",
+        "記錄當下讀值、時間與現場狀況",
+      ],
+      dataSuspect: ["先處理資料：溫度近期讀值卡住或為 0，請先檢查感測器與連線"],
+    },
+  },
 };
 
-/** 沒有候選風險決策的場域（資料不足，依平台政策不建模） */
-export const NO_RISK_REASONS: Record<string, string> = {
-  rearing_plant_1_north:
-    "此場域只有 387 列（涵蓋 17.6%），連續區段短，依平台政策不建立預測模型，也就沒有「預測式」風險決策。仍可使用資料品質、缺口與候選異常診斷。",
-};
+/** 沒有候選風險決策的場域（目前七個場域都有；保留給之後新增、沒有政策的場域） */
+export const NO_RISK_REASONS: Record<string, string> = {};
 
 export function classify(value: number, policy: CandidatePolicy): RiskLevel {
   if (!Number.isFinite(value)) return "normal";

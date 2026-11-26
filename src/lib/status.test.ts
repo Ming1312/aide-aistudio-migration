@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { PrecomputedAnomalies, PrecomputedForecasts, RealCatalog } from "../../contracts/types.ts";
+import { parseCsvText } from "./csv.ts";
 import { answerLocal } from "./qa.ts";
-import { computeDomainStatus, overallLevel, type StatusInput } from "./status.ts";
+import { computeDomainStatus, maskOutageRows, overallLevel, type StatusInput } from "./status.ts";
 import type { ParsedCsvRow } from "../types/app.ts";
 
 const read = <T,>(f: string): T => JSON.parse(readFileSync(`public/data/real_public/${f}`, "utf-8")) as T;
@@ -18,18 +19,37 @@ const input = (id: string, extra: Partial<StatusInput> = {}): StatusInput => ({
   ...extra,
 });
 
-test("七個場域：北側無模型；其餘各有 +1h／+3h 預測與迷你圖", () => {
+test("七個場域：各有 +1h／+3h 預測與迷你圖；北側沒有預計算預測，沒有資料時回報原因", () => {
   const all = catalog.datasets.map((d) => computeDomainStatus(input(d.id)));
   assert.equal(all.length, 7);
   const north = all.find((s) => s.datasetId === "rearing_plant_1_north")!;
   assert.equal(north.level, "none");
-  assert.equal(north.hasModel, false);
-  for (const s of all.filter((x) => x.hasModel)) {
+  assert.equal(north.hasModel, true);
+  assert.ok(north.noModelReason);
+  for (const s of all.filter((x) => x.datasetId !== "rearing_plant_1_north")) {
     assert.deepEqual(s.horizons.map((h) => h.h), [1, 3], s.datasetId);
     assert.ok(s.spark.length > 24, s.datasetId);
     assert.ok(s.asOf);
+    assert.equal(s.source, "precomputed");
   }
   assert.notEqual(overallLevel(all), "none");
+});
+
+test("育成北側：資料不完整仍做分析（簡易預測）；略過斷電／歸零時段、依最後有效資料；有提醒文字", () => {
+  const raw = readFileSync("public/data/real_public/rearing_plant_1_north.csv", "utf-8");
+  const rows = parseCsvText(raw, "__real").rows;
+  const ev = anomalies.datasets["rearing_plant_1_north"].events;
+  const m = maskOutageRows(rows, ev);
+  assert.ok(m.masked > 0 && m.rows.length < rows.length);
+  const s = computeDomainStatus(input("rearing_plant_1_north", { liveRows: m.rows, liveIsBase: true, maskedRows: m.masked }));
+  assert.equal(s.source, "baseline");
+  assert.deepEqual(s.horizons.map((h) => h.h), [1, 3]);
+  assert.ok(s.incomplete && s.incomplete.includes("資料不完整") && s.incomplete.includes("略過"));
+  assert.ok(s.current !== null && s.current > 5, "最後有效資料不是 0");
+  assert.ok(["safe", "caution", "danger"].includes(s.level));
+  // 有預計算預測的場域不受 liveIsBase 影響
+  const sheep = computeDomainStatus(input("sheep_barn", { liveRows: m.rows, liveIsBase: true }));
+  assert.equal(sheep.source, "precomputed");
 });
 
 test("門檻覆寫會改變等級（把羊舍門檻調到遠高於資料 → 安全）", () => {

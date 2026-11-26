@@ -23,6 +23,7 @@ export function buildFacts(list: DomainStatus[]): Fact[] {
 
 export function buildDomainFacts(s: DomainStatus): Fact[] {
   const facts: Fact[] = [{ id: "d1", text: statusLine(s) }];
+  if (s.incomplete) facts.push({ id: "d0", text: s.incomplete });
   if (s.asOf) facts.push({ id: "d2", text: `資料截至 ${s.asOf}（資料來源：${s.source === "import" ? "匯入資料＋簡易基準預測" : "預計算研究預測"}）` });
   facts.push({
     id: "d3",

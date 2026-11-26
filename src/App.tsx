@@ -12,8 +12,9 @@ import {
   loadRealCsv,
 } from "./lib/dataLoader";
 import { mergeRows } from "./lib/liveSeries";
+import { CANDIDATE_POLICIES, findTask } from "./lib/candidateRisk";
 import { loadJson, saveJson } from "./lib/storage";
-import { computeDomainStatus, type StatusInput, type ThresholdOverrides } from "./lib/status";
+import { computeDomainStatus, maskOutageRows, type StatusInput, type ThresholdOverrides } from "./lib/status";
 import { useEngine } from "./lib/useEngine";
 import { useImporter } from "./lib/useImporter";
 import { DataPage } from "./pages/DataPage";
@@ -78,12 +79,23 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // 有匯入資料的場域才需要原始 CSV（合併後建立簡易預測）
+  // 需要原始 CSV 的場域：有匯入資料者（合併後建立簡易預測），以及「有風險政策但沒有預計算預測」者（例如資料不完整的育成一廠北側）
   const importedIds = Object.keys(importer.imported).filter((id) => importer.imported[id].length > 0);
-  const importedKey = importedIds.join(",");
+  const baselineIds = useMemo(
+    () =>
+      (catalog?.datasets ?? [])
+        .filter((d) => {
+          const p = CANDIDATE_POLICIES[d.id];
+          return !!p && !!forecasts && !findTask(forecasts, d.id, p.sensor, 1);
+        })
+        .map((d) => d.id),
+    [catalog, forecasts]
+  );
+  const needBase = Array.from(new Set([...importedIds, ...baselineIds]));
+  const importedKey = needBase.join(",");
   useEffect(() => {
     let cancelled = false;
-    for (const id of importedIds) {
+    for (const id of needBase) {
       if (baseRows[id]) continue;
       loadRealCsv(id)
         .then((d) => !cancelled && setBaseRows((m) => (m[id] ? m : { ...m, [id]: d.rows })))
@@ -108,13 +120,22 @@ export const App: React.FC = () => {
         forecasts,
         anomalies: anomaliesMap[ds.id],
         overrides,
-        // 匯入資料比原始資料更新時才改用匯入資料做預測（內容相同的重複匯入不降低預測品質）
-        liveRows: imp && imp.length > 0 && base && base.length > 0 && imp[imp.length - 1].tsMs > base[base.length - 1].tsMs ? mergeRows(base, imp) : null,
+        // 匯入資料比原始資料更新時才改用匯入資料做預測（內容相同的重複匯入不降低預測品質）；
+        // 沒有預計算預測的場域（資料不完整）一律用原始＋匯入資料建立簡易預測
+        ...(() => {
+          const importNewer = !!imp && imp.length > 0 && !!base && base.length > 0 && imp[imp.length - 1].tsMs > base[base.length - 1].tsMs;
+          if (importNewer) return { liveRows: mergeRows(base!, imp!), liveIsBase: false };
+          if (baselineIds.includes(ds.id) && base && base.length > 0) {
+            const m = maskOutageRows(mergeRows(base, imp ?? []), anomaliesMap[ds.id]?.events ?? []);
+            return { liveRows: m.rows, liveIsBase: true, maskedRows: m.masked };
+          }
+          return { liveRows: null, liveIsBase: false };
+        })(),
         engine: engine.data[ds.id] ?? null,
       });
     }
     return m;
-  }, [datasets, forecasts, anomaliesMap, overrides, importer.imported, baseRows, engine.data]);
+  }, [datasets, forecasts, anomaliesMap, overrides, importer.imported, baseRows, engine.data, baselineIds]);
 
   const statuses = useMemo(() => datasets.map((d) => computeDomainStatus(inputs.get(d.id)!)), [datasets, inputs]);
 

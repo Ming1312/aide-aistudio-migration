@@ -26,22 +26,26 @@ const forecasts = JSON.parse(
   readFileSync(new URL("../../public/data/real_public/precomputed/forecasts.json", import.meta.url), "utf8")
 ) as PrecomputedForecasts;
 
-test("七個場域一視同仁：羊舍與其他場域各有一組假定門檻；只有資料不足的育成北側沒有，且有說明原因", () => {
+// 有預計算預測任務的政策（育成北側資料不完整，沒有預計算預測，改用瀏覽器內簡易預測）
+const POLICIES_WITH_TASKS = Object.values(CANDIDATE_POLICIES).filter((p) => findTask(forecasts, p.datasetId, p.sensor, 3));
+
+test("七個場域一視同仁：每個場域各有一組假定門檻；育成北側沒有預計算預測、改用簡易預測", () => {
   const ids = Object.keys(CANDIDATE_POLICIES).sort();
   assert.deepEqual(ids, [
     "construction_site_cb13505",
     "expert_system_c22",
     "northeast_corner",
     "rearing_plant_1",
+    "rearing_plant_1_north",
     "sanyegong_creek",
     "sheep_barn",
   ]);
-  assert.deepEqual(Object.keys(NO_RISK_REASONS), ["rearing_plant_1_north"]);
-  assert.ok(NO_RISK_REASONS.rearing_plant_1_north.includes("不建立預測模型"));
+  assert.deepEqual(POLICIES_WITH_TASKS.map((p) => p.datasetId).sort(), ids.filter((i) => i !== "rearing_plant_1_north"));
+  assert.deepEqual(Object.keys(NO_RISK_REASONS), []);
 });
 
 test("每個政策的感測器與三個時距都找得到預先算好的任務，門檻方向一致", () => {
-  for (const p of Object.values(CANDIDATE_POLICIES)) {
+  for (const p of POLICIES_WITH_TASKS) {
     for (const h of [1, 3, 6]) {
       const t = findTask(forecasts, p.datasetId, p.sensor, h);
       assert.ok(t, `${p.datasetId} ${p.sensor} h${h}`);
@@ -72,7 +76,7 @@ test("applyOverride 會修正反向的門檻", () => {
 });
 
 test("歷史回放：混淆矩陣加總＝有真值的起點數，且只用真值已抵達的點；與反應式規則並排", () => {
-  for (const p of Object.values(CANDIDATE_POLICIES)) {
+  for (const p of POLICIES_WITH_TASKS) {
     const t = findTask(forecasts, p.datasetId, p.sensor, 3)!;
     const bt = backtest(t, p, t.best_baseline);
     const sum = (c: { tp: number; fn: number; fp: number; tn: number }) => c.tp + c.fn + c.fp + c.tn;
@@ -85,7 +89,7 @@ test("歷史回放：混淆矩陣加總＝有真值的起點數，且只用真�
 });
 
 test("每個政策在回放視窗內至少有一次候選事件（示範不是全程平靜）", () => {
-  for (const p of Object.values(CANDIDATE_POLICIES)) {
+  for (const p of POLICIES_WITH_TASKS) {
     const t = findTask(forecasts, p.datasetId, p.sensor, 3)!;
     const bt = backtest(t, p, t.best_baseline);
     assert.ok(bt.events > 0, `${p.datasetId} 沒有事件`);
@@ -106,7 +110,7 @@ test("最新評估：最後一個起點沒有真值，風險等級取觀測與�
   assert.equal(bad.dataSuspect, true);
   assert.ok(bad.headline.includes("先處理資料"));
   // 所有行動只有檢查／確認／通知，沒有設備控制用語
-  for (const pol of Object.values(CANDIDATE_POLICIES)) {
+  for (const pol of POLICIES_WITH_TASKS) {
     const all = [...pol.actions.caution, ...pol.actions.alarm, ...pol.actions.dataSuspect].join("／");
     assert.ok(!/自動(啟動|關閉|控制|調整)|遠端(控制|啟動)|開啟風扇|關閉風扇/.test(all), pol.datasetId);
   }

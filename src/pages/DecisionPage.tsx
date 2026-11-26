@@ -177,6 +177,13 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData, canRe
         <SafetyBadge level={status.level} className="text-sm" />
       </section>
 
+      {status.incomplete && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950" data-testid="incomplete-note">
+          {status.incomplete}
+          {status.asOf ? `（分析時點 ${status.asOf.slice(0, 16)}）` : ""}
+        </div>
+      )}
+
       {/* AI 分析 */}
       <Card
         title={

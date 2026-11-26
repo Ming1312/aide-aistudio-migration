@@ -60,6 +60,8 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
   const [overlay, setOverlay] = useState(true);
   const [normalize, setNormalize] = useState(true);
   const [rangeId, setRangeId] = useState("7d");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [showForecast, setShowForecast] = useState(false);
   const [horizon, setHorizon] = useState(3);
   const [model, setModel] = useState<ModelKey | "best">("best");
@@ -84,6 +86,8 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
     setPicked(first ? [first.key] : []);
     setListOpen(false);
     setSearch("");
+    setStartDate("");
+    setEndDate("");
   }, [dataset.id, dataset.columns]);
 
   const rows = useMemo(() => (baseRows ? mergeRows(baseRows, importedRows) : []), [baseRows, importedRows]);
@@ -93,12 +97,22 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
   const unitOf = (k: string) => colByKey.get(k)?.unit ?? "";
 
   const range = RANGES.find((r) => r.id === rangeId)!;
+  const custom = startDate !== "" || endDate !== "";
+  const bounds = useMemo(
+    () => (rows.length > 0 ? { min: rows[0].timestamp.slice(0, 10), max: rows[rows.length - 1].timestamp.slice(0, 10) } : null),
+    [rows]
+  );
   const visibleRows = useMemo(() => {
     if (rows.length === 0) return rows;
+    if (custom) {
+      const from = startDate ? parseLocalTimestampMs(`${startDate} 00:00:00`) : -Infinity;
+      const to = endDate ? parseLocalTimestampMs(`${endDate} 23:59:59`) : Infinity;
+      return rows.filter((r) => r.tsMs >= from && r.tsMs <= to);
+    }
     if (range.hours === null) return rows;
     const end = rows[rows.length - 1].tsMs;
     return rows.filter((r) => r.tsMs >= end - range.hours! * H);
-  }, [rows, range]);
+  }, [rows, range, custom, startDate, endDate]);
 
   const units = new Set(picked.map(unitOf));
   const mixedUnits = units.size > 1;
@@ -306,10 +320,56 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex gap-1" role="group" aria-label="範圍">
             {RANGES.map((r) => (
-              <Chip key={r.id} active={rangeId === r.id} onClick={() => setRangeId(r.id)}>
+              <Chip
+                key={r.id}
+                active={!custom && rangeId === r.id}
+                onClick={() => {
+                  setRangeId(r.id);
+                  setStartDate("");
+                  setEndDate("");
+                }}
+              >
                 {r.label}
               </Chip>
             ))}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-600" role="group" aria-label="日期範圍">
+            <label className="inline-flex items-center gap-1">
+              起點
+              <input
+                type="date"
+                value={startDate}
+                min={bounds?.min}
+                max={endDate || bounds?.max}
+                onChange={(e) => setStartDate(e.target.value)}
+                aria-label="起始日期"
+                className={`rounded-md border px-1.5 py-1 text-xs ${startDate ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300 bg-white"}`}
+              />
+            </label>
+            <label className="inline-flex items-center gap-1">
+              終點
+              <input
+                type="date"
+                value={endDate}
+                min={startDate || bounds?.min}
+                max={bounds?.max}
+                onChange={(e) => setEndDate(e.target.value)}
+                aria-label="結束日期"
+                className={`rounded-md border px-1.5 py-1 text-xs ${endDate ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300 bg-white"}`}
+              />
+            </label>
+            {custom && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-slate-500 hover:underline"
+              >
+                清除
+              </button>
+            )}
           </div>
           <div className="flex gap-1" role="group" aria-label="顯示方式">
             <Chip active={overlay} onClick={() => setOverlay(true)}>
@@ -371,6 +431,10 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
           <div className="h-72 grid place-items-center text-sm text-slate-500">載入中…</div>
         ) : picked.length === 0 ? (
           <div className="h-72 grid place-items-center text-sm text-slate-500">請選擇數據</div>
+        ) : visibleRows.length === 0 ? (
+          <div className="h-72 grid place-items-center text-sm text-slate-500" data-testid="no-rows">
+            這段日期沒有資料{bounds ? `（資料範圍 ${bounds.min} ～ ${bounds.max}）` : ""}
+          </div>
         ) : overlay ? (
           chartFor(picked, 360, doNormalize ? undefined : units.size === 1 ? [...units][0] : undefined)
         ) : (
