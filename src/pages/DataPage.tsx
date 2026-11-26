@@ -72,7 +72,7 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
     setLoadErr(null);
     loadRealCsv(dataset.id)
       .then((d) => !cancelled && setBaseRows(d.rows))
-      .catch((e) => !cancelled && setLoadErr(e instanceof Error ? e.message : "載入失敗"));
+      .catch((e) => !cancelled && setLoadErr(e instanceof TypeError ? "連不上資料伺服器（網頁伺服器可能已關閉）：請確認伺服器仍在執行後重新整理" : e instanceof Error ? e.message : "載入失敗"));
     return () => {
       cancelled = true;
     };
