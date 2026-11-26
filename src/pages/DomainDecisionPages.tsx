@@ -41,7 +41,7 @@ import { buildReplayRows, summarizeReplay, type ReplayRiskLevel } from "../lib/r
 import type { ApiHealthStatus, PageId } from "../types/app";
 
 interface Props {
-  page: Extract<PageId, "sheep_risk" | "sheep_actions" | "sheep_diagnosis" | "sheep_forecast" | "sheep_replay">;
+  page: Extract<PageId, "decision_risk" | "decision_actions" | "decision_diagnosis" | "decision_forecast" | "decision_replay">;
   dataset: RealDataset;
   precomputedForecasts: PrecomputedForecasts | null;
   anomalies: AnomaliesResponse | undefined;
@@ -136,19 +136,19 @@ export const DomainDecisionPages: React.FC<Props> = ({
       <div>• <strong>系統不控制任何設備</strong>（所有處置均由人員決定）。預測是研究預測（探索性、未經獨立前瞻驗證）。</div>
       {policy && (
         <div>
-          • 與羊舍的差別：羊舍是凍結的正式引擎輸出；本頁是<strong>預先算好的研究預測</strong>＋滾動 split-conformal 區間＋殘差機率，
-          全部只用「起點當下已抵達的真值」（因果），不是凍結的正式模型。
+          • 方法（七個場域相同）：<strong>預先算好的研究預測</strong>＋滾動 split-conformal 區間＋殘差機率，
+          全部只用「起點當下已抵達的真值」（因果）；不是凍結或註冊的正式模型。
         </div>
       )}
     </div>
   );
 
   const titleMap: Record<Props["page"], string> = {
-    sheep_risk: "風險評估",
-    sheep_forecast: "AI 預測",
-    sheep_replay: "歷史回放",
-    sheep_diagnosis: "異常診斷（候選事件檢視，不是故障判定）",
-    sheep_actions: "處置決策與人工紀錄",
+    decision_risk: "風險評估",
+    decision_forecast: "AI 預測",
+    decision_replay: "歷史回放",
+    decision_diagnosis: "異常診斷（候選事件檢視，不是故障判定）",
+    decision_actions: "處置決策與人工紀錄",
   };
 
   const header = (icon: React.ReactNode, sub?: React.ReactNode) => (
@@ -158,7 +158,7 @@ export const DomainDecisionPages: React.FC<Props> = ({
           {icon}
           <span className="min-w-0">
             {dataset.display_name}　{titleMap[page]}
-            {policy && page !== "sheep_diagnosis" && page !== "sheep_actions" ? `（${policy.sensor} +${horizon} 小時・嚴格回放）` : ""}
+            {policy && page !== "decision_diagnosis" && page !== "decision_actions" ? `（${policy.sensor} +${horizon} 小時・嚴格回放）` : ""}
           </span>
         </h1>
         {sub && <p className="text-xs text-slate-600 mt-1 flex flex-wrap items-center gap-1.5 min-w-0 break-words">{sub}</p>}
@@ -170,7 +170,7 @@ export const DomainDecisionPages: React.FC<Props> = ({
   );
 
   // ---------- 異常診斷（所有場域；與羊舍同一版型）
-  if (page === "sheep_diagnosis") {
+  if (page === "decision_diagnosis") {
     const evs = [...events].sort((a, b) => (a.end < b.end ? 1 : -1));
     return (
       <div className="space-y-6 min-w-0" data-testid="domain-diagnosis-page">
@@ -226,7 +226,7 @@ export const DomainDecisionPages: React.FC<Props> = ({
   }
 
   // ---------- 處置決策
-  if (page === "sheep_actions") {
+  if (page === "decision_actions") {
     const lvl = row ? row.riskLevel : "unavailable";
     const actions =
       row?.handling === "data_first"
@@ -297,7 +297,7 @@ export const DomainDecisionPages: React.FC<Props> = ({
     forecast: r.point,
     band: r.interval ? [r.interval.lower, r.interval.upper] : undefined,
   }));
-  const icon = page === "sheep_replay" ? <History className="h-5 w-5 text-[#0B63CE] shrink-0" /> : <ShieldAlert className="h-5 w-5 text-[#0B63CE] shrink-0" />;
+  const icon = page === "decision_replay" ? <History className="h-5 w-5 text-[#0B63CE] shrink-0" /> : <ShieldAlert className="h-5 w-5 text-[#0B63CE] shrink-0" />;
 
   return (
     <div className="space-y-6 min-w-0" data-testid="domain-decision-page">
@@ -425,7 +425,7 @@ export const DomainDecisionPages: React.FC<Props> = ({
               </ResponsiveContainer>
             </div>
 
-            {page === "sheep_forecast" && (
+            {page === "decision_forecast" && (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs" data-testid="domain-methods-table">
                   <thead>
@@ -457,7 +457,7 @@ export const DomainDecisionPages: React.FC<Props> = ({
               </div>
             )}
 
-            {page === "sheep_replay" && (
+            {page === "decision_replay" && (
               <div className="space-y-3" data-testid="domain-replay-summary">
                 <div className="h-64 w-full min-w-0 overflow-x-auto">
                   <ResponsiveContainer width="100%" height="100%">

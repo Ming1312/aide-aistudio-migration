@@ -1,20 +1,12 @@
 import type { DataKind, PageId } from "../types/app";
 
-export const SHEEP_ONLY_PAGES: ReadonlySet<PageId> = new Set<PageId>([
-  "sheep_risk",
-  "sheep_actions",
-  "sheep_diagnosis",
-  "sheep_forecast",
-  "sheep_replay",
-]);
-
 export const REAL_ONLY_GUARDED_PAGES: ReadonlySet<PageId> = new Set<PageId>([
   "decision_support",
-  "sheep_risk",
-  "sheep_actions",
-  "sheep_diagnosis",
-  "sheep_forecast",
-  "sheep_replay",
+  "decision_risk",
+  "decision_actions",
+  "decision_diagnosis",
+  "decision_forecast",
+  "decision_replay",
 ]);
 
 export const ALWAYS_REAL_CONTENT_PAGES: ReadonlySet<PageId> = new Set<PageId>([
@@ -35,11 +27,11 @@ export function isRealOnlyGuardedPage(page: PageId): boolean {
 
 export function isNavItemVisible(
   itemId: PageId,
-  tier: "daily" | "sheep" | "advanced",
+  tier: "daily" | "decision" | "advanced",
   globalDataKind: DataKind,
   datasetId: string
 ): boolean {
-  if (tier === "sheep") {
+  if (tier === "decision") {
     // 「場域決策」5 頁：七個場域都有（羊舍＝正式引擎輸出；其餘＝研究預測＋假定門檻），只有真實資料模式
     return globalDataKind === "real";
   }

@@ -42,31 +42,27 @@ test("dataKindPolicy：橫幅依頁面內容決定，合成模式隱藏決策輔
   // Guarded real-only pages
   for (const page of [
     "decision_support",
-    "sheep_risk",
-    "sheep_actions",
-    "sheep_diagnosis",
-    "sheep_forecast",
-    "sheep_replay",
+    "decision_risk",
+    "decision_actions",
+    "decision_diagnosis",
+    "decision_forecast",
+    "decision_replay",
   ] as const) {
     assert.equal(isRealOnlyGuardedPage(page), true);
-    assert.equal(
-      isNavItemVisible(
-        page,
-        page === "decision_support" ? "daily" : "sheep",
-        "synthetic",
-        "sheep_barn"
-      ),
-      false
-    );
-    assert.equal(
-      isNavItemVisible(
-        page,
-        page === "decision_support" ? "daily" : "sheep",
-        "real",
-        "sheep_barn"
-      ),
-      true
-    );
+    // 七個場域一視同仁：同一頁在每個場域都一樣（真實模式可見、合成模式隱藏）
+    for (const ds of [
+      "sheep_barn",
+      "expert_system_c22",
+      "sanyegong_creek",
+      "construction_site_cb13505",
+      "northeast_corner",
+      "rearing_plant_1",
+      "rearing_plant_1_north",
+    ]) {
+      const tier = page === "decision_support" ? "daily" : "decision";
+      assert.equal(isNavItemVisible(page, tier, "synthetic", ds), false, `${page} ${ds} synthetic`);
+      assert.equal(isNavItemVisible(page, tier, "real", ds), true, `${page} ${ds} real`);
+    }
   }
 });
 

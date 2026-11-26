@@ -45,12 +45,12 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "data_update", label: "資料更新", tier: "daily", syntheticAllowed: true },
   { id: "explorer", label: "資料探索與分析", tier: "daily" },
   { id: "model_lifecycle", label: "模型維護", tier: "daily" },
-  // 場域決策（七個場域都有；羊舍是凍結的正式引擎輸出，其餘為研究預測＋假定門檻）
-  { id: "sheep_risk", label: "風險評估", tier: "sheep" },
-  { id: "sheep_actions", label: "處置決策", tier: "sheep" },
-  { id: "sheep_diagnosis", label: "異常診斷", tier: "sheep" },
-  { id: "sheep_forecast", label: "AI 預測", tier: "sheep" },
-  { id: "sheep_replay", label: "歷史回放", tier: "sheep" },
+  // 場域決策（七個場域一視同仁：研究預測＋假定門檻）
+  { id: "decision_risk", label: "風險評估", tier: "decision" },
+  { id: "decision_actions", label: "處置決策", tier: "decision" },
+  { id: "decision_diagnosis", label: "異常診斷", tier: "decision" },
+  { id: "decision_forecast", label: "AI 預測", tier: "decision" },
+  { id: "decision_replay", label: "歷史回放", tier: "decision" },
   // 進階研究
   { id: "catalog", label: "場域目錄", tier: "advanced" },
   { id: "provenance", label: "資料來源與使用聲明", tier: "advanced" },
@@ -69,11 +69,11 @@ const NAV_ICONS: Record<PageId, React.ReactNode> = {
   data_update: <Database className="h-4 w-4" />,
   explorer: <BarChart3 className="h-4 w-4" />,
   model_lifecycle: <Wrench className="h-4 w-4" />,
-  sheep_risk: <ShieldAlert className="h-4 w-4" />,
-  sheep_actions: <SlidersHorizontal className="h-4 w-4" />,
-  sheep_diagnosis: <Stethoscope className="h-4 w-4" />,
-  sheep_forecast: <Activity className="h-4 w-4" />,
-  sheep_replay: <History className="h-4 w-4" />,
+  decision_risk: <ShieldAlert className="h-4 w-4" />,
+  decision_actions: <SlidersHorizontal className="h-4 w-4" />,
+  decision_diagnosis: <Stethoscope className="h-4 w-4" />,
+  decision_forecast: <Activity className="h-4 w-4" />,
+  decision_replay: <History className="h-4 w-4" />,
   catalog: <Compass className="h-4 w-4" />,
   provenance: <FileCheck2 className="h-4 w-4" />,
   guide: <BookOpen className="h-4 w-4" />,
@@ -117,7 +117,6 @@ export const Layout: React.FC<LayoutProps> = ({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const activeDataset = datasets.find((d) => d.id === datasetId);
-  const isSheep = datasetId === "sheep_barn";
 
   // 橫幅永遠由「該頁內容的資料種類」決定，而非全域切換
   const effectiveBannerKind: DataKind =
@@ -272,8 +271,8 @@ export const Layout: React.FC<LayoutProps> = ({
         )}
         {dataKind === "real" &&
           renderNavSection(
-            isSheep ? "場域決策（羊舍：正式引擎）" : "場域決策（假定門檻）",
-            NAV_ITEMS.filter((i) => i.tier === "sheep")
+            "場域決策（假定門檻）",
+            NAV_ITEMS.filter((i) => i.tier === "decision")
           )}
         {renderNavSection(
           "進階研究",

@@ -23,11 +23,11 @@ export type PageId =
   | "explorer"
   | "model_lifecycle"
   // 羊舍決策 (Tier 2 — 只在羊舍顯示)
-  | "sheep_risk"
-  | "sheep_actions"
-  | "sheep_diagnosis"
-  | "sheep_forecast"
-  | "sheep_replay"
+  | "decision_risk"
+  | "decision_actions"
+  | "decision_diagnosis"
+  | "decision_forecast"
+  | "decision_replay"
   // 進階研究 (Tier 3)
   | "catalog"
   | "provenance"
@@ -40,7 +40,7 @@ export type PageId =
 export interface NavItem {
   id: PageId;
   label: string;
-  tier: "daily" | "sheep" | "advanced";
+  tier: "daily" | "decision" | "advanced";
   syntheticAllowed?: boolean;
 }
 

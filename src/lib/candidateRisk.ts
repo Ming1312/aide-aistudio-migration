@@ -6,11 +6,11 @@ import type {
 } from "../../contracts/types";
 
 /**
- * 候選風險決策（六個非羊舍場域）。
+ * 候選風險決策（七個場域一視同仁；育成北側因資料不足沒有）。
  *
  * 重要：這裡所有「門檻」都是**假定值**（assumed）——沒有任何一個經資料提供者確認，也沒有故障標籤可驗證。
  * 它們只是讓「預測 → 風險等級 → 檢查／確認／通知」流程能在每個場域跑起來的示範參數，
- * 使用者可在畫面上修改。羊舍的 THI 84 同樣只是候選值，但羊舍另有凍結的正式決策引擎（見羊舍決策頁）。
+ * 使用者可在畫面上修改。羊舍的 THI 84 也是候選值，與其他場域同一種處理。
  * 系統不控制任何設備；行動只有「檢查／確認／通知」。
  */
 
@@ -33,6 +33,29 @@ export interface CandidatePolicy {
 export const ASSUMED_BADGE = "假定門檻・未經資料提供者確認・僅供展示";
 
 export const CANDIDATE_POLICIES: Record<string, CandidatePolicy> = {
+  sheep_barn: {
+    datasetId: "sheep_barn",
+    sensor: "成羊區THI",
+    unit: "THI 指數",
+    direction: "above",
+    caution: 84,
+    alarm: 86,
+    basis:
+      "羊舍的熱緊迫以 THI（溫濕指數）判斷，成羊區 THI 與 NRC 公式重算相關 0.9997。84 是研究中沿用的候選分析門檻（83／84／85 做過敏感度分析），未經資料提供者確認；86 為假定的警戒線。最近 168 小時範圍 78.3～87.6。",
+    actions: {
+      caution: [
+        "確認畜舍通風、遮陽與帆布狀態（現場確認，系統不控制設備）",
+        "通知負責人留意接下來幾小時的 THI 走勢",
+      ],
+      alarm: [
+        "通知現場人員確認通風與降溫措施是否需要人工處置",
+        "記錄當下 THI、時間與現場狀況",
+      ],
+      dataSuspect: [
+        "先處理資料：THI 由溫度與濕度導出，先確認溫濕度感測器是否卡值或漂移",
+      ],
+    },
+  },
   expert_system_c22: {
     datasetId: "expert_system_c22",
     sensor: "DO1 即時值",
@@ -151,8 +174,6 @@ export const CANDIDATE_POLICIES: Record<string, CandidatePolicy> = {
 export const NO_RISK_REASONS: Record<string, string> = {
   rearing_plant_1_north:
     "此場域只有 387 列（涵蓋 17.6%），連續區段短，依平台政策不建立預測模型，也就沒有「預測式」風險決策。仍可使用資料品質、缺口與候選異常診斷。",
-  sheep_barn:
-    "羊舍已有凍結的正式決策引擎（HGB＋CQR＋ProbLinQ＋可靠度檢查＋警報管理），請見「羊舍決策」五個頁面；門檻 THI 84 同樣只是候選值。",
 };
 
 export function classify(value: number, policy: CandidatePolicy): RiskLevel {

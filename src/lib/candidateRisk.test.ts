@@ -26,7 +26,7 @@ const forecasts = JSON.parse(
   readFileSync(new URL("../../public/data/real_public/precomputed/forecasts.json", import.meta.url), "utf8")
 ) as PrecomputedForecasts;
 
-test("六個場域各有一組假定門檻；羊舍與育成北側沒有，且有說明原因", () => {
+test("七個場域一視同仁：羊舍與其他場域各有一組假定門檻；只有資料不足的育成北側沒有，且有說明原因", () => {
   const ids = Object.keys(CANDIDATE_POLICIES).sort();
   assert.deepEqual(ids, [
     "construction_site_cb13505",
@@ -34,8 +34,9 @@ test("六個場域各有一組假定門檻；羊舍與育成北側沒有，且�
     "northeast_corner",
     "rearing_plant_1",
     "sanyegong_creek",
+    "sheep_barn",
   ]);
-  assert.ok(NO_RISK_REASONS.sheep_barn.includes("正式決策引擎"));
+  assert.deepEqual(Object.keys(NO_RISK_REASONS), ["rearing_plant_1_north"]);
   assert.ok(NO_RISK_REASONS.rearing_plant_1_north.includes("不建立預測模型"));
 });
 

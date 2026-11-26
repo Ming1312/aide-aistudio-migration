@@ -28,7 +28,6 @@ import { ExplorerPage } from "./pages/ExplorerPage";
 import { LiveForecastPage } from "./pages/LiveForecastPage";
 import { ModelLifecyclePage } from "./pages/ModelLifecyclePage";
 import { OverviewPage } from "./pages/OverviewPage";
-import { SheepDecisionPages } from "./pages/SheepDecisionPages";
 import {
   isRealOnlyGuardedPage,
 } from "./lib/dataKindPolicy";
@@ -53,11 +52,11 @@ const VALID_PAGE_IDS = new Set<PageId>([
   "data_update",
   "explorer",
   "model_lifecycle",
-  "sheep_risk",
-  "sheep_actions",
-  "sheep_diagnosis",
-  "sheep_forecast",
-  "sheep_replay",
+  "decision_risk",
+  "decision_actions",
+  "decision_diagnosis",
+  "decision_forecast",
+  "decision_replay",
   "catalog",
   "provenance",
   "guide",
@@ -412,20 +411,11 @@ export const App: React.FC = () => {
         );
       case "model_lifecycle":
         return <ModelLifecyclePage dataset={activeDataset} health={health} />;
-      case "sheep_risk":
-      case "sheep_actions":
-      case "sheep_diagnosis":
-      case "sheep_forecast":
-      case "sheep_replay":
-        if (activeDataset.id === "sheep_barn") {
-          return (
-            <SheepDecisionPages
-              page={activePage}
-              anomalies={anomaliesMap["sheep_barn"]}
-              health={health}
-            />
-          );
-        }
+      case "decision_risk":
+      case "decision_actions":
+      case "decision_diagnosis":
+      case "decision_forecast":
+      case "decision_replay":
         return (
           <DomainDecisionPages
             page={activePage}

@@ -128,8 +128,6 @@ export const DecisionSupportPage: React.FC<DecisionSupportPageProps> = ({
     setExpandedEvidence((prev) => ({ ...prev, [recId]: !prev[recId] }));
   };
 
-  const isSheep = data?.dataset_id === "sheep_barn";
-
   const evidenceMap = new Map<string, DecisionEvidence>(
     (data?.evidence ?? []).map((ev) => [ev.id, ev])
   );
@@ -144,10 +142,10 @@ export const DecisionSupportPage: React.FC<DecisionSupportPageProps> = ({
   const generalRecs = (data?.recommendations ?? []).filter(
     (r) => r.tier === "general"
   );
-  // formal_risk 嚴格只允許出現在 sheep_barn
-  const formalRiskRecs = isSheep
-    ? (data?.recommendations ?? []).filter((r) => r.tier === "formal_risk")
-    : [];
+  // formal_risk 層只來自「已登錄的風險決策引擎」（引擎端資料決定；沒有登錄就沒有這一層）。七個場域用同一套判斷。
+  const formalRiskRecs = (data?.recommendations ?? []).filter(
+    (r) => r.tier === "formal_risk"
+  );
 
   const allRuleBased =
     explainResult &&
@@ -472,13 +470,13 @@ export const DecisionSupportPage: React.FC<DecisionSupportPageProps> = ({
 
             <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-1">
               <div className="text-xs text-slate-500">
-                {isSheep ? "正式風險決策引擎" : "專用風險模型狀態"}
+                風險決策引擎狀態
               </div>
-              {isSheep && data.capability.formal_risk.status === "available" ? (
+              {data.capability.formal_risk.status === "available" ? (
                 <div>
                   <div className="text-sm font-semibold text-[#0B63CE] flex items-center gap-1.5">
                     <ShieldAlert className="h-4 w-4" />
-                    可用（門檻 84 為候選值）
+                    可用（門檻為候選值）
                   </div>
                   <div className="text-xs text-slate-600 mt-1">
                     {data.capability.formal_risk.validated_policy
@@ -494,6 +492,9 @@ export const DecisionSupportPage: React.FC<DecisionSupportPageProps> = ({
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
                     {data.capability.formal_risk.reason || "此場域沒有登錄專用風險模型"}
+                    <span className="block mt-1">
+                      仍可使用「場域決策」頁的風險評估（研究預測＋假定門檻，未經確認）。
+                    </span>
                   </div>
                 </div>
               )}
@@ -661,8 +662,8 @@ export const DecisionSupportPage: React.FC<DecisionSupportPageProps> = ({
             </div>
           </section>
 
-          {/* 4. 正式風險決策（嚴格只出現在羊舍） */}
-          {isSheep && (
+          {/* 4. 風險決策層（引擎端有登錄才有內容；七個場域同一版型） */}
+          {formalRiskRecs.length > 0 && (
             <section
               aria-label="正式風險決策"
               className="rounded-lg border border-blue-300 bg-blue-50/70 p-5 space-y-4"
@@ -670,11 +671,11 @@ export const DecisionSupportPage: React.FC<DecisionSupportPageProps> = ({
               <div className="space-y-1.5">
                 <h2 className="text-base font-bold text-blue-950 flex items-center gap-2">
                   <ShieldAlert className="h-4 w-4 text-[#0B63CE]" />
-                  正式風險決策（僅羊舍；原樣引用既有決策引擎）
+                  風險決策（原樣引用既有決策引擎的輸出）
                 </h2>
                 <div className="text-xs text-blue-950 space-y-1">
                   <div>
-                    • <strong>門檻 84 為候選值，未經資料提供者確認</strong>；
+                    • <strong>門檻為候選值，未經資料提供者確認</strong>；
                     {data.capability.formal_risk.validated_policy
                       ? "政策已驗證"
                       : "目前沒有經驗證的政策"}
