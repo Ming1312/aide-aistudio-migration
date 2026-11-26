@@ -85,3 +85,46 @@ test("parseImportedText：原始匯出格式（日期＋小時兩欄、表頭帶
   assert.ok(p.issues.some((i) => i.includes("1 列")));
   assert.equal(new Set(p.rows.map((r) => r.tsMs)).size, 3);
 });
+
+import { readFileSync } from "node:fs";
+import { extractSheetId, parseSheetTabs, sheetCsvUrl } from "../../contracts/sheetTabs.ts";
+import { guessDataset } from "./sheetImport.ts";
+import type { RealCatalog } from "../../contracts/types.ts";
+
+test("parseSheetTabs／extractSheetId：從 htmlview 取出所有工作表；網址轉換", () => {
+  const html =
+    'items.push({name: "三爺宮溪", pageUrl: "https:\\/\\/x?gid\\x3d1", gid: "528252282",initialSheet: ("1" == gid)});' +
+    'items.push({name: "羊舍", pageUrl: "u", gid: "1758647837",initialSheet: false});items.push({name: "羊舍", pageUrl: "u", gid: "1758647837"});';
+  const tabs = parseSheetTabs(html);
+  assert.deepEqual(tabs, [{ name: "三爺宮溪", gid: "528252282" }, { name: "羊舍", gid: "1758647837" }]);
+  assert.equal(extractSheetId("https://docs.google.com/spreadsheets/d/ExampleSheetId0123456789abcdefgh/edit?gid=1"), "ExampleSheetId0123456789abcdefgh");
+  assert.equal(extractSheetId("https://example.com/spreadsheets/d/ExampleSheetId0123456789abcdefgh"), null);
+  assert.equal(extractSheetId("not a url"), null);
+  assert.equal(sheetCsvUrl("ABC", "12"), "https://docs.google.com/spreadsheets/d/ABC/export?format=csv&gid=12");
+});
+
+test("guessDataset：依欄位自動判斷場域（原始表頭完全相同者優先）；對不上回 null", () => {
+  const cat = JSON.parse(readFileSync("public/data/real_public/catalog_real.json", "utf-8")) as RealCatalog;
+  for (const ds of cat.datasets) {
+    const cols = ds.columns.filter((c) => c.n_observed > 0).slice(0, 6);
+    const csv = ["日期,小時," + cols.map((c) => c.raw_header).join(","), "2026/06/01,8," + cols.map(() => "1").join(",")].join("\n");
+    const g = guessDataset("工作表", csv, cat.datasets);
+    assert.equal(g?.datasetId, ds.id, ds.id);
+  }
+  assert.equal(guessDataset("x", "timestamp,foo,bar\n2026-01-01 00:00,1,2", cat.datasets), null);
+});
+
+import { normalizeTimestamp } from "./liveSeries.ts";
+
+test("normalizeTimestamp 與表頭前的說明列：2026/1/1 不補零也能解析；圖例列被略過", () => {
+  assert.equal(normalizeTimestamp("2026/1/1 8:5"), "2026-01-01 08:05:00");
+  assert.equal(normalizeTimestamp("2026-11-27T09:00:00"), "2026-11-27 09:00:00");
+  assert.equal(normalizeTimestamp("2026/6/1"), "2026-06-01 00:00:00");
+  const cb = [{ key: "風速", raw_header: "CB13505 - 風速" }, { key: "噪音", raw_header: "CB13505 - 噪音" }] as unknown as RealColumn[];
+  const csv = "HH,,,4\nHI,,,3\n日期,小時,CB13505 - 風速,CB13505 - 噪音\n2026/1/1,0,0.8,86.6\n2026/1/1,1,1.4,52.8\n";
+  const p = parseImportedText(csv, cb);
+  assert.equal(p.rows.length, 2);
+  assert.equal(p.rows[0].timestamp, "2026-01-01 00:00:00");
+  assert.equal(p.rows[1].values["噪音"], 52.8);
+  assert.equal(p.exactMatches, 2);
+});

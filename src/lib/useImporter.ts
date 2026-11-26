@@ -120,7 +120,14 @@ export function useImporter(catalog: RealCatalog | null, pollEnabled = true) {
   );
 
   const addSource = useCallback((src: Omit<ImportSource, "id">): ImportSource => {
-    const full = { ...src, id: `src-${Date.now().toString(36)}` };
+    // 同一個網址＋場域已經連接過：沿用並更新頻率，不重複新增
+    const dup = sourcesRef.current.find((x) => x.url === src.url && x.datasetId === src.datasetId && x.kind === src.kind);
+    if (dup) {
+      const updated = { ...dup, everyMin: src.everyMin };
+      setSources((s) => s.map((x) => (x.id === dup.id ? updated : x)));
+      return updated;
+    }
+    const full = { ...src, id: `src-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}` };
     setSources((s) => [...s, full]);
     return full;
   }, []);

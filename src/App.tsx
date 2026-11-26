@@ -108,7 +108,8 @@ export const App: React.FC = () => {
         forecasts,
         anomalies: anomaliesMap[ds.id],
         overrides,
-        liveRows: imp && imp.length > 0 && base ? mergeRows(base, imp) : null,
+        // 匯入資料比原始資料更新時才改用匯入資料做預測（內容相同的重複匯入不降低預測品質）
+        liveRows: imp && imp.length > 0 && base && base.length > 0 && imp[imp.length - 1].tsMs > base[base.length - 1].tsMs ? mergeRows(base, imp) : null,
         engine: engine.data[ds.id] ?? null,
       });
     }

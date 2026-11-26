@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { CheckCircle2, Download, FileUp, Link2, Lock, RefreshCw, Table2, Trash2, XCircle } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
 import { resolveSourceUrl, type SourceKind } from "../lib/importSources";
+import { planWholeSheet, type TabPlan } from "../lib/sheetImport";
 import type { Importer, SourceStatus } from "../lib/useImporter";
 import { Card, Chip } from "../components/ui";
 
@@ -13,9 +14,10 @@ interface Props {
   onLogin: () => void;
 }
 
-type Mode = "sheet" | "url" | "file" | "paste";
+type Mode = "all" | "sheet" | "url" | "file" | "paste";
 
 const MODES: Array<{ id: Mode; label: string; icon: React.ReactNode }> = [
+  { id: "all", label: "整份試算表", icon: <Table2 className="h-4 w-4" /> },
   { id: "sheet", label: "Google 試算表", icon: <Table2 className="h-4 w-4" /> },
   { id: "url", label: "CSV 網址", icon: <Link2 className="h-4 w-4" /> },
   { id: "file", label: "上傳檔案", icon: <FileUp className="h-4 w-4" /> },
@@ -59,7 +61,12 @@ const StatusLine: React.FC<{ st: SourceStatus | null }> = ({ st }) => {
 };
 
 export const ImportPage: React.FC<Props> = ({ datasets, datasetId, importer, canImport, onLogin }) => {
-  const [mode, setMode] = useState<Mode>("sheet");
+  const [mode, setMode] = useState<Mode>("all");
+  const [plans, setPlans] = useState<TabPlan[] | null>(null);
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [targets, setTargets] = useState<Record<string, string>>({});
+  const [progress, setProgress] = useState<string | null>(null);
+  const [allMsg, setAllMsg] = useState<string | null>(null);
   const [target, setTarget] = useState(datasetId);
   const [url, setUrl] = useState("");
   const [every, setEvery] = useState(5);
@@ -79,6 +86,42 @@ export const ImportPage: React.FC<Props> = ({ datasets, datasetId, importer, can
     const st = await importer.runSource(src);
     setLast(st);
     setBusy(false);
+  };
+
+  const readAll = async () => {
+    setBusy(true);
+    setPlans(null);
+    setAllMsg(null);
+    try {
+      const { plans: ps } = await planWholeSheet(url, datasets, (d, t) => setProgress(`${d}/${t}`));
+      setPlans(ps);
+      setPicked(Object.fromEntries(ps.map((p) => [p.tab.gid, !!p.datasetId])));
+      setTargets(Object.fromEntries(ps.map((p) => [p.tab.gid, p.datasetId ?? ""])));
+    } catch (e) {
+      setAllMsg(e instanceof Error ? e.message : "讀取失敗");
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  };
+
+  const importAll = () => {
+    if (!plans) return;
+    let ok = 0;
+    let rows = 0;
+    let added = 0;
+    for (const p of plans) {
+      const ds = targets[p.tab.gid];
+      if (!picked[p.tab.gid] || !ds || !p.text) continue;
+      const src = importer.addSource({ kind: "sheet", datasetId: ds, url: p.csvUrl, everyMin: every });
+      const st = importer.ingestText(ds, p.text, `試算表「${p.tab.name}」`, src.id);
+      if (st.ok) {
+        ok += 1;
+        rows += st.rows;
+        added += st.added;
+      }
+    }
+    setAllMsg(`已匯入 ${ok} 張工作表，共 ${rows} 列（新增 ${added}）${every > 0 ? `；每 ${every} 分鐘自動更新` : ""}`);
   };
 
   const onFile = async (file: File | undefined) => {
@@ -162,6 +205,112 @@ export const ImportPage: React.FC<Props> = ({ datasets, datasetId, importer, can
             </button>
           ))}
         </div>
+
+        {mode === "all" && (
+          <div className="space-y-3">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/…"
+              aria-label="試算表網址"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#0B63CE] focus:outline-none"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void readAll()}
+                disabled={busy || !url.trim()}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-[#0B63CE] text-white text-sm font-semibold disabled:opacity-40"
+              >
+                {busy && <RefreshCw className="h-4 w-4 animate-spin" />}
+                {busy && progress ? `讀取中 ${progress}` : "讀取所有工作表"}
+              </button>
+              <span className="text-[11px] text-slate-500">每張工作表依欄位自動對應場域</span>
+            </div>
+            {plans && (
+              <div className="space-y-2" data-testid="sheet-plan">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-slate-500">
+                        <th className="py-1 pr-2" />
+                        <th className="py-1 pr-3 font-medium">工作表</th>
+                        <th className="py-1 pr-3 font-medium">匯入到</th>
+                        <th className="py-1 pr-3 font-medium">列數</th>
+                        <th className="py-1 font-medium">時間範圍</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {plans.map((p) => (
+                        <tr key={p.tab.gid} className="border-t border-slate-100" data-testid="sheet-plan-row">
+                          <td className="py-1.5 pr-2">
+                            <input
+                              type="checkbox"
+                              aria-label={`匯入 ${p.tab.name}`}
+                              checked={!!picked[p.tab.gid]}
+                              disabled={!p.text || !targets[p.tab.gid]}
+                              onChange={(e) => setPicked((m) => ({ ...m, [p.tab.gid]: e.target.checked }))}
+                            />
+                          </td>
+                          <td className="py-1.5 pr-3 text-slate-900">{p.tab.name}</td>
+                          <td className="py-1.5 pr-3">
+                            {p.text ? (
+                              <select
+                                value={targets[p.tab.gid] ?? ""}
+                                onChange={(e) => setTargets((m) => ({ ...m, [p.tab.gid]: e.target.value }))}
+                                aria-label={`${p.tab.name} 對應場域`}
+                                className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs"
+                              >
+                                <option value="">（略過）</option>
+                                {datasets.map((d) => (
+                                  <option key={d.id} value={d.id}>
+                                    {d.display_name.split("（")[0]}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="text-xs text-red-700">{p.error}</span>
+                            )}
+                            {p.text && p.error && <span className="ml-1 text-xs text-amber-800">{p.error}</span>}
+                          </td>
+                          <td className="py-1.5 pr-3 tabular-nums text-slate-700">{p.rows || "—"}</td>
+                          <td className="py-1.5 text-xs text-slate-500">{p.first && p.last ? `${p.first.slice(0, 10)} ～ ${p.last.slice(0, 10)}` : ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={every}
+                    onChange={(e) => setEvery(Number(e.target.value))}
+                    aria-label="更新頻率"
+                    className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm"
+                  >
+                    {EVERY.map((e) => (
+                      <option key={e.v} value={e.v}>
+                        {e.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={importAll}
+                    disabled={!plans.some((p) => picked[p.tab.gid] && targets[p.tab.gid] && p.text)}
+                    className="px-4 py-1.5 rounded-md bg-[#0B63CE] text-white text-sm font-semibold disabled:opacity-40"
+                  >
+                    全部匯入
+                  </button>
+                </div>
+              </div>
+            )}
+            {allMsg && (
+              <div className={`text-xs font-medium ${/^已匯入/.test(allMsg) ? "text-emerald-800" : "text-red-800"}`} data-testid="sheet-all-msg">
+                {allMsg}
+              </div>
+            )}
+          </div>
+        )}
 
         {(mode === "sheet" || mode === "url") && (
           <div className="space-y-2">

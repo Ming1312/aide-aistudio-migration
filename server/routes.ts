@@ -10,6 +10,7 @@ import type {
   PrecomputedAnomalies,
 } from "../contracts/types.ts";
 import { can } from "../contracts/permissions.ts";
+import { extractSheetId, parseSheetTabs, sheetTabsUrl } from "../contracts/sheetTabs.ts";
 import { AdminGate, DEMO_ACCOUNT, DEMO_PASSWORD, DEMO_STAFF_ACCOUNT, DEMO_STAFF_PASSWORD } from "../reference/adminAuth.ts";
 import {
   explainDecision,
@@ -847,7 +848,7 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
       return;
     }
     const clientIp = req.ip || req.socket.remoteAddress || "unknown";
-    if (!limiter.check(clientIp).allowed) {
+    if (!liveReadLimiter.check(clientIp).allowed) {
       res.status(429).json({ detail: "請求過於頻繁，請稍後再試" });
       return;
     }
@@ -862,6 +863,36 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
       return;
     }
     res.json({ text: result.text });
+  });
+
+  // 整份試算表：列出所有工作表（名稱＋gid）。員工以上；只讀 docs.google.com 的 htmlview 頁面
+  router.get("/import/sheet-tabs", async (req: Request, res: Response) => {
+    const role = adminGate.role(getOrCreateSessionId(req, res));
+    if (!can(role, "import_data")) {
+      res.status(403).json({ detail: "資料匯入需要員工或管理員身分，請先登入" });
+      return;
+    }
+    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+    if (!liveReadLimiter.check(clientIp).allowed) {
+      res.status(429).json({ detail: "請求過於頻繁，請稍後再試" });
+      return;
+    }
+    const id = extractSheetId(typeof req.query.url === "string" ? req.query.url : "");
+    if (!id) {
+      res.status(400).json({ detail: "請貼上 Google 試算表網址" });
+      return;
+    }
+    const result = await fetchImportText(sheetTabsUrl(id), []);
+    if (!result.ok) {
+      res.status(result.status).json({ detail: result.reason });
+      return;
+    }
+    const tabs = parseSheetTabs(result.text);
+    if (tabs.length === 0) {
+      res.status(422).json({ detail: "讀不到工作表清單（試算表需設為「知道連結的任何人可檢視」）" });
+      return;
+    }
+    res.json({ id, tabs });
   });
 
   router.post("/ai/explain", async (req: Request, res: Response) => {

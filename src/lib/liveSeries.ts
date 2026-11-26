@@ -23,6 +23,8 @@ export interface ParsedImport {
   timestampColumn: string | null;
   issues: string[];
   rawRowCount: number;
+  /** 與場域「原始表頭」完全相同的欄數（用來判斷這份資料屬於哪個場域） */
+  exactMatches: number;
 }
 
 function splitLine(line: string, delim: string): string[] {
@@ -53,25 +55,39 @@ function detectDelimiter(header: string): string {
 
 const norm = (s: string) => s.toLowerCase().replace(/[\s_\-:：]+/g, "");
 
-function matchColumn(header: string, columns: RealColumn[]): string | null {
+function matchColumn(header: string, columns: RealColumn[]): { key: string; exact: boolean } | null {
   const h = norm(header);
   if (!h) return null;
-  for (const c of columns) if (norm(c.key) === h) return c.key;
-  for (const c of columns) if (c.raw_header && norm(c.raw_header) === h) return c.key;
+  for (const c of columns) if (c.raw_header && norm(c.raw_header) === h) return { key: c.key, exact: true };
+  for (const c of columns) if (norm(c.key) === h) return { key: c.key, exact: false };
   // 表頭帶場域前綴（"<前綴> - pH"）時，以尾段比對
   const tail = norm(header.split(/\s-\s/).pop() ?? "");
   if (tail && tail !== h) {
-    for (const c of columns) if (norm(c.key) === tail) return c.key;
+    for (const c of columns) if (norm(c.key) === tail) return { key: c.key, exact: false };
   }
   return null;
 }
 
+const TS_HEADER = /^(日期|date|timestamp|datetime|time|時間|時間戳記?)$/i;
+
+/** 把 2026/1/1、2026-1-1T8:00、2026.01.01 8:5 這類寫法補零成 2026-01-01 08:05:00（沒有時間就當 00:00:00）。 */
+export function normalizeTimestamp(raw: string): string {
+  const s = raw.trim();
+  const m = s.match(/^(\d{4})[/.\-](\d{1,2})[/.\-](\d{1,2})(?:[T\s]+(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?$/);
+  if (!m) return s.replace(/\//g, "-").replace("T", " ");
+  const p2 = (v: string | undefined) => String(Number(v ?? "0")).padStart(2, "0");
+  return `${m[1]}-${p2(m[2])}-${p2(m[3])} ${p2(m[4])}:${p2(m[5])}:${p2(m[6])}`;
+}
+
 export function parseImportedText(text: string, columns: RealColumn[]): ParsedImport {
-  const clean = text.replace(/^﻿/, "");
-  const lines = clean.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  const clean = text.replace(/^\uFEFF/, "");
+  let lines = clean.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  // 表頭前面有說明列（例如圖例、備註）：在前 10 列找第一個含「日期／時間」欄名的列當表頭
+  const headAt = lines.slice(0, 10).findIndex((l) => splitLine(l, detectDelimiter(l)).some((c) => TS_HEADER.test(c.trim())));
+  if (headAt > 0) lines = lines.slice(headAt);
   const issues: string[] = [];
   if (lines.length < 2) {
-    return { rows: [], matched: {}, unmatched: [], timestampColumn: null, issues: ["沒有資料列"], rawRowCount: 0 };
+    return { rows: [], matched: {}, unmatched: [], timestampColumn: null, issues: ["沒有資料列"], rawRowCount: 0, exactMatches: 0 };
   }
   if (/^\s*<(!doctype|html)/i.test(lines[0])) {
     return {
@@ -81,6 +97,7 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
       timestampColumn: null,
       issues: ["讀到的是網頁而不是 CSV：試算表需設為「知道連結的任何人可檢視」或「發布到網路」"],
       rawRowCount: 0,
+      exactMatches: 0,
     };
   }
   const delim = detectDelimiter(lines[0]);
@@ -95,10 +112,14 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
   const timestampColumn = splitTs ? `${headers[dateIdx]}＋${headers[hourIdx]}` : (headers[tsIdx] ?? null);
   const matched: Record<string, string> = {};
   const unmatched: string[] = [];
+  let exactMatches = 0;
   headers.forEach((h, i) => {
     if (i === tsIdx || (splitTs && i === hourIdx)) return;
-    const key = matchColumn(h, columns);
-    if (key) matched[h] = key;
+    const hit = matchColumn(h, columns);
+    if (hit) {
+      matched[h] = hit.key;
+      if (hit.exact) exactMatches += 1;
+    }
     else if (h) unmatched.push(h);
   });
   const rows: ParsedCsvRow[] = [];
@@ -110,8 +131,8 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
       const hh = Number((cells[hourIdx] ?? "").match(/\d+/)?.[0]);
       tsRaw = Number.isInteger(hh) && hh >= 0 && hh <= 23 ? `${tsRaw.trim()} ${String(hh).padStart(2, "0")}:00:00` : "";
     }
-    // 容忍 "2026/11/27 08:00"、"2026-11-27T08:00:00" 與 "2026-11-27 08:00"
-    const tsNorm = tsRaw.replace(/\//g, "-").replace("T", " ");
+    // 容忍 "2026/11/27 08:00"、"2026/1/1"、"2026-11-27T08:00:00" 與 "2026-11-27 08:00"
+    const tsNorm = normalizeTimestamp(tsRaw);
     const ms = parseLocalTimestampMs(tsNorm);
     if (!ms) {
       badTs++;
@@ -134,7 +155,7 @@ export function parseImportedText(text: string, columns: RealColumn[]): ParsedIm
   }
   if (Object.keys(matched).length === 0) issues.push("沒有任何欄位對應到此場域的感測器欄名");
   rows.sort((a, b) => a.tsMs - b.tsMs);
-  return { rows, matched, unmatched, timestampColumn, issues, rawRowCount: lines.length - 1 };
+  return { rows, matched, unmatched, timestampColumn, issues, rawRowCount: lines.length - 1, exactMatches };
 }
 
 /** 匯入列蓋過同一時間的原始列；依時間排序。 */
