@@ -312,7 +312,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="flex items-center justify-between gap-2">
           <span className="text-slate-500">權限狀態</span>
           <span className="font-medium text-slate-700">
-            {adminRole.role === "admin" ? "管理者已解鎖" : "預設唯讀"}
+            {adminRole.role === "admin" ? "管理者已解鎖" : adminRole.role === "demo_admin" ? "展示管理者（不能寫入）" : "預設唯讀"}
           </span>
         </div>
       </div>
@@ -381,13 +381,15 @@ export const Layout: React.FC<LayoutProps> = ({
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-colors ${
                   adminRole.role === "admin"
                     ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                    : adminRole.role === "demo_admin"
+                    ? "border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                {adminRole.role === "admin" ? (
+                {adminRole.role !== "viewer" ? (
                   <>
                     <Unlock className="h-3.5 w-3.5" />
-                    管理者模式
+                    {adminRole.role === "admin" ? "管理者模式" : "展示管理者"}
                   </>
                 ) : (
                   <>

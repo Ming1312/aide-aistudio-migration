@@ -1196,3 +1196,125 @@ test("引擎憑證被拒：health 轉為離線、代理回 502 通用訊息、�
 
 
 
+
+// ---------------- 管理者：展示預設帳號、管理狀態、F12 ----------------
+async function loginAs(base: string, body: Record<string, unknown>) {
+  const res = await fetch(`${base}/api/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const cookie = (res.headers.get("set-cookie") || "").split(";")[0];
+  return { res, cookie, json: (await res.json()) as Record<string, unknown> };
+}
+
+test("展示預設帳號：/admin/role 提供公開提示；登入後是展示管理者；可看管理狀態（只有布林值）；寫入一律 403 且引擎完全沒收到請求", async () => {
+  const seen: string[] = [];
+  await withMockEngine(
+    (req, _b, res) => {
+      seen.push(`${req.method} ${req.url}`);
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true }));
+    },
+    async (engineUrl) => {
+      await withServer(
+        { engineBaseUrl: engineUrl, engineApiKey: "k-read-123", engineAdminKey: "k-admin-456", geminiBundle: null, adminDemoEnabled: true },
+        async (base) => {
+          const role = (await (await fetch(`${base}/api/admin/role`)).json()) as {
+            configured: boolean; role: string; demo_available: boolean; demo_hint?: { account: string; password: string };
+          };
+          assert.equal(role.configured, false);
+          assert.equal(role.demo_available, true);
+          assert.equal(role.demo_hint?.account, "demo");
+          assert.equal(role.role, "viewer");
+
+          // 沒登入：管理狀態 403
+          assert.equal((await fetch(`${base}/api/admin/status`)).status, 403);
+
+          // 錯誤密碼 401
+          assert.equal((await loginAs(base, { account: "demo", passphrase: "nope" })).res.status, 401);
+
+          const ok = await loginAs(base, { account: "demo", passphrase: "aide-demo" });
+          assert.equal(ok.res.status, 200);
+          assert.equal(ok.json.role, "demo_admin");
+          const headers = { Cookie: ok.cookie, "Content-Type": "application/json" };
+
+          const st = await fetch(`${base}/api/admin/status`, { headers });
+          assert.equal(st.status, 200);
+          const stText = await st.text();
+          const stat = JSON.parse(stText) as Record<string, unknown>;
+          assert.equal(stat.role, "demo_admin");
+          assert.equal(stat.engine_admin_key_configured, true);
+          assert.equal(stat.can_write_engine, false);
+          assert.equal(stat.demo_account_active, true);
+          // 絕不洩漏任何值
+          for (const secret of ["k-read-123", "k-admin-456", engineUrl, "aide-demo"]) assert.equal(stText.includes(secret), false, secret);
+
+          // 展示管理者不能寫入：五個寫入端點都 403，引擎沒收到任何東西
+          for (const action of ["ingest", "commit", "rollback", "recompute", "sim/tick"]) {
+            const w = await fetch(`${base}/api/live/sheep_barn/${action}`, { method: "POST", headers, body: "{}" });
+            assert.equal(w.status, 403, action);
+            const j = (await w.json()) as { detail: string };
+            assert.ok(j.detail.includes("展示管理者不能寫入引擎"));
+          }
+          assert.equal(seen.filter((s) => s.startsWith("POST")).length, 0);
+
+          // 登出後回到 viewer
+          await fetch(`${base}/api/admin/logout`, { method: "POST", headers });
+          assert.equal(((await (await fetch(`${base}/api/admin/role`, { headers })).json()) as { role: string }).role, "viewer");
+        }
+      );
+    }
+  );
+});
+
+test("設定正式管理者後，展示預設帳號停用且不再提示；正式帳號名稱必須相符；關閉開關也停用", async () => {
+  const adminHash = makeHash("real-pass-xyz-123", 100_000);
+  await withServer({ engineBaseUrl: "", geminiBundle: null, adminHash, adminAccount: "boss", adminDemoEnabled: true }, async (base) => {
+    const role = (await (await fetch(`${base}/api/admin/role`)).json()) as { configured: boolean; demo_available: boolean; demo_hint?: unknown };
+    assert.equal(role.configured, true);
+    assert.equal(role.demo_available, false);
+    assert.equal(role.demo_hint, undefined);
+    assert.equal((await loginAs(base, { account: "demo", passphrase: "aide-demo" })).res.status, 401);
+    assert.equal((await loginAs(base, { account: "admin", passphrase: "real-pass-xyz-123" })).res.status, 401); // 帳號不是 boss
+    const ok = await loginAs(base, { account: "boss", passphrase: "real-pass-xyz-123" });
+    assert.equal(ok.res.status, 200);
+    assert.equal(ok.json.role, "admin");
+    const st = (await (await fetch(`${base}/api/admin/status`, { headers: { Cookie: ok.cookie } })).json()) as Record<string, unknown>;
+    assert.equal(st.can_write_engine, true);
+    assert.equal(st.demo_account_active, false);
+    assert.equal(st.real_account_name, "boss");
+  });
+  await withServer({ engineBaseUrl: "", geminiBundle: null, adminDemoEnabled: false }, async (base) => {
+    const role = (await (await fetch(`${base}/api/admin/role`)).json()) as { demo_available: boolean };
+    assert.equal(role.demo_available, false);
+    assert.equal((await loginAs(base, { account: "demo", passphrase: "aide-demo" })).res.status, 403);
+  });
+});
+
+test("F12：引擎因沒有管理金鑰而停用寫入（403 寫入功能停用）→ 管理者看到「唯讀展示」403，而不是 502 憑證錯誤；其他 403 仍是 502", async () => {
+  const adminHash = makeHash("f12-pass-123456", 100_000);
+  let mode: "readonly" | "badkey" = "readonly";
+  await withMockEngine(
+    (_req, _b, res) => {
+      res.setHeader("Content-Type", "application/json");
+      res.statusCode = 403;
+      res.end(JSON.stringify({ detail: mode === "readonly" ? "管理金鑰未設定（AIDE_ADMIN_KEY）：寫入功能停用" : "缺少或錯誤的 X-Admin-Key" }));
+    },
+    async (engineUrl) => {
+      await withServer({ adminHash, engineBaseUrl: engineUrl, engineApiKey: "k1", engineAdminKey: "k2", geminiBundle: null }, async (base) => {
+        const ok = await loginAs(base, { passphrase: "f12-pass-123456" });
+        const headers = { Cookie: ok.cookie, "Content-Type": "application/json" };
+        const r1 = await fetch(`${base}/api/live/sheep_barn/sim/tick`, { method: "POST", headers, body: "{}" });
+        assert.equal(r1.status, 403);
+        const t1 = await r1.text();
+        assert.ok(t1.includes("此部署為唯讀展示"));
+        assert.equal(t1.includes("憑證"), false);
+        mode = "badkey";
+        const r2 = await fetch(`${base}/api/live/sheep_barn/sim/tick`, { method: "POST", headers, body: "{}" });
+        assert.equal(r2.status, 502);
+        assert.ok((await r2.text()).includes("引擎憑證設定有誤"));
+      });
+    }
+  );
+});

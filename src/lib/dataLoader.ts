@@ -23,6 +23,7 @@ import type {
 } from "../../contracts/types";
 import type {
   AdminRoleStatus,
+  AdminStatusInfo,
   ApiHealthStatus,
   DecisionWithSource,
   DemoStepOutputsFile,
@@ -193,25 +194,31 @@ export async function fetchAdminRole(): Promise<AdminRoleStatus> {
   return (await res.json()) as AdminRoleStatus;
 }
 
-export async function loginAdmin(passphrase: string): Promise<{
+export interface AdminLoginResponse {
   ok: boolean;
-  role: "viewer" | "admin";
+  role: "viewer" | "demo_admin" | "admin";
   locked?: boolean;
+  remaining?: number;
   remainingTries?: number;
   message: string;
-}> {
+}
+
+export async function loginAdmin(
+  passphrase: string,
+  account?: string
+): Promise<AdminLoginResponse> {
   const res = await fetch("/api/admin/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ passphrase }),
+    body: JSON.stringify(account ? { account, passphrase } : { passphrase }),
   });
-  return (await res.json()) as {
-    ok: boolean;
-    role: "viewer" | "admin";
-    locked?: boolean;
-    remainingTries?: number;
-    message: string;
-  };
+  return (await res.json()) as AdminLoginResponse;
+}
+
+export async function fetchAdminStatus(): Promise<AdminStatusInfo> {
+  const res = await fetch("/api/admin/status");
+  if (!res.ok) throw new Error(`無法讀取管理狀態（HTTP ${res.status}）`);
+  return (await res.json()) as AdminStatusInfo;
 }
 
 export async function logoutAdmin(): Promise<void> {

@@ -36,3 +36,41 @@ test("解鎖、錯誤計數與 5 次鎖定；鎖定後連正確密碼都不行",
   g.logout("s2");
   assert.equal(g.role("s2"), "viewer");
 });
+
+// ---- 展示預設帳號（公開值；只能是 demo_admin，永遠不能是 admin）
+import { DEMO_ACCOUNT, DEMO_PASSWORD } from "./adminAuth.ts";
+
+test("展示預設帳號：沒有正式管理者且啟用時可登入，角色是 demo_admin（不是 admin）", () => {
+  const g = new AdminGate(undefined, 5, { demoEnabled: true });
+  assert.equal(g.configured(), false);
+  assert.equal(g.demoAvailable(), true);
+  const r = g.login("s1", DEMO_PASSWORD, DEMO_ACCOUNT);
+  assert.equal(r.ok, true);
+  assert.equal(r.role, "demo_admin");
+  assert.equal(g.role("s1"), "demo_admin");
+  // 舊版只輸入密碼也相容
+  assert.equal(g.login("s2", DEMO_PASSWORD).role, "demo_admin");
+  g.logout("s1");
+  assert.equal(g.role("s1"), "viewer");
+});
+
+test("展示預設帳號：帳號或密碼錯、5 次鎖定；沒有啟用時完全不可用", () => {
+  const g = new AdminGate(undefined, 5, { demoEnabled: true });
+  assert.equal(g.login("a", "wrong", DEMO_ACCOUNT).ok, false);
+  assert.equal(g.login("a", DEMO_PASSWORD, "someone-else").ok, false);
+  for (let i = 0; i < 3; i++) g.login("a", "wrong", DEMO_ACCOUNT);
+  assert.equal(g.login("a", DEMO_PASSWORD, DEMO_ACCOUNT).locked, true);
+  const off = new AdminGate(undefined, 5, { demoEnabled: false });
+  assert.equal(off.demoAvailable(), false);
+  assert.equal(off.login("b", DEMO_PASSWORD, DEMO_ACCOUNT).ok, false);
+  assert.equal(off.role("b"), "viewer");
+});
+
+test("一旦設定正式管理者，展示預設帳號自動停用；正式帳號可自訂名稱且必須相符", () => {
+  const g = new AdminGate(KAT, 5, { demoEnabled: true, account: "Boss" });
+  assert.equal(g.demoAvailable(), false);
+  assert.equal(g.login("c", DEMO_PASSWORD, DEMO_ACCOUNT).ok, false);
+  assert.equal(g.login("c", "test-only-passphrase-123", "demo").ok, false);   // 密碼對、帳號錯
+  assert.equal(g.login("d", "test-only-passphrase-123", " boss ").role, "admin"); // 不分大小寫、去空白
+  assert.equal(g.login("e", "test-only-passphrase-123").role, "admin");        // 省略帳號相容舊版
+});

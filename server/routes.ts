@@ -9,7 +9,7 @@ import type {
   ExplainRequest,
   PrecomputedAnomalies,
 } from "../contracts/types.ts";
-import { AdminGate } from "../reference/adminAuth.ts";
+import { AdminGate, DEMO_ACCOUNT, DEMO_PASSWORD } from "../reference/adminAuth.ts";
 import {
   explainDecision,
   ruleBasedExplain,
@@ -164,6 +164,10 @@ async function fetchEngineJson(
 
 export interface ApiRouterOptions {
   adminHash?: string;
+  /** 正式管理者帳號名稱（預設環境變數 ADMIN_ACCOUNT，再預設 admin） */
+  adminAccount?: string;
+  /** 沒有正式管理者時是否開放展示預設帳號（預設：除非 ADMIN_DEMO_DISABLED=1） */
+  adminDemoEnabled?: boolean;
   engineBaseUrl?: string;
   engineApiKey?: string;
   engineAdminKey?: string;
@@ -258,7 +262,15 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
   const adminGate = new AdminGate(
     options.adminHash !== undefined
       ? options.adminHash
-      : process.env.ADMIN_PASSPHRASE_HASH
+      : process.env.ADMIN_PASSPHRASE_HASH,
+    5,
+    {
+      account: options.adminAccount ?? process.env.ADMIN_ACCOUNT,
+      demoEnabled:
+        options.adminDemoEnabled !== undefined
+          ? options.adminDemoEnabled
+          : process.env.ADMIN_DEMO_DISABLED !== "1",
+    }
   );
 
   const engineExpected = loadJsonFile<{ api_version_prefix: string }>(
@@ -538,26 +550,53 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
   // Admin auth
   router.get("/admin/role", (req: Request, res: Response) => {
     const sid = getOrCreateSessionId(req, res);
+    const demo = adminGate.demoAvailable();
     res.json({
       configured: adminGate.configured(),
       role: adminGate.role(sid),
+      demo_available: demo,
+      // 展示預設帳號是公開值；正式管理者一旦設定就不再提供，也不回傳任何雜湊或金鑰
+      ...(demo ? { demo_hint: { account: DEMO_ACCOUNT, password: DEMO_PASSWORD } } : {}),
     });
   });
 
   router.post("/admin/login", (req: Request, res: Response) => {
     const sid = getOrCreateSessionId(req, res);
-    const body = req.body as { passphrase?: unknown } | undefined;
+    const body = req.body as { passphrase?: unknown; account?: unknown } | undefined;
     const passphrase =
       typeof body?.passphrase === "string" ? body.passphrase : "";
-    const result = adminGate.login(sid, passphrase);
+    const account = typeof body?.account === "string" ? body.account : undefined;
+    const result = adminGate.login(sid, passphrase, account);
     const status = result.ok
       ? 200
-      : !adminGate.configured()
+      : !adminGate.configured() && !adminGate.demoAvailable()
       ? 403
       : result.locked
       ? 429
       : 401;
     res.status(status).json(result);
+  });
+
+  // 管理狀態（展示管理者與正式管理者可看）：只回傳「是否設定」的布林值，不回傳任何值
+  router.get("/admin/status", (req: Request, res: Response) => {
+    const sid = getOrCreateSessionId(req, res);
+    const role = adminGate.role(sid);
+    if (role === "viewer") {
+      res.status(403).json({ detail: "請先登入管理者或展示管理者" });
+      return;
+    }
+    const { base, key, adminKey } = getEngineConfig();
+    res.json({
+      role,
+      engine_url_configured: !!base,
+      engine_api_key_configured: !!key,
+      engine_admin_key_configured: !!adminKey,
+      gemini_configured: !!options.geminiBundle || !!process.env.GEMINI_API_KEY,
+      real_admin_configured: adminGate.configured(),
+      demo_account_active: adminGate.demoAvailable(),
+      real_account_name: adminGate.configured() ? adminGate.realAccountName() : null,
+      can_write_engine: role === "admin",
+    });
   });
 
   router.post("/admin/logout", (req: Request, res: Response) => {
@@ -1060,7 +1099,15 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
     }
 
     const sid = getOrCreateSessionId(req, res);
-    if (adminGate.role(sid) !== "admin") {
+    const writeRole = adminGate.role(sid);
+    if (writeRole === "demo_admin") {
+      res.status(403).json({
+        detail:
+          "展示管理者不能寫入引擎：寫入需要設定正式管理者（ADMIN_PASSPHRASE_HASH）並由其登入",
+      });
+      return;
+    }
+    if (writeRole !== "admin") {
       res.status(403).json({ detail: "僅限管理者操作，請先完成管理者驗證" });
       return;
     }
@@ -1112,6 +1159,20 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
       }
       if (result.parseError) {
         res.status(502).json({ detail: "引擎回應格式不符" });
+        return;
+      }
+      // F12：引擎沒有設定管理金鑰＝這個部署唯讀。不是憑證問題，直接說清楚。
+      if (
+        result.status === 403 &&
+        result.data &&
+        typeof result.data === "object" &&
+        typeof (result.data as { detail?: unknown }).detail === "string" &&
+        (result.data as { detail: string }).detail.includes("寫入功能停用")
+      ) {
+        res.status(403).json({
+          detail:
+            "此部署為唯讀展示：引擎已停用寫入（匯入／提交／回復／重算／模擬推進）",
+        });
         return;
       }
       if (isEngineAuthFailure(result.status)) {
