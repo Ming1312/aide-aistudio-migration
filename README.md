@@ -116,6 +116,8 @@ cd demo_kit
 填好後按 Apply changes，開 `/api/health` 應看到 `engine_connected: true`、`live_writes_enabled: false`。
 引擎連不上時 App 不會當機：決策輔助改用預計算結果並標示來源（`precomputed`），即時預測頁保留上次畫面並說明離線，不會拿預計算檔冒充即時預測。
 
+> **v1.1.0 之後的本機變更（尚未推送、未在 AI Studio 驗證）**：新增日常頁「候選風險決策」（六個非羊舍場域，假定門檻）；即時預測頁在沒有引擎時改為「預先準備資料＋模擬新資料匯入」展示。見 [`docs/final/09_CHANGES_AFTER_V1_1_0.md`](docs/final/09_CHANGES_AFTER_V1_1_0.md)。
+
 ## 已驗證與已知限制
 
 2026-11-25 完成的遠端整合驗收（AI Studio → Node → Cloudflare Quick Tunnel → Caddy → Python 引擎；零新增費用）：七場域的預測／異常／決策輔助皆來自引擎、自動更新（30 秒輪詢，v13→v14）、Tunnel 關閉後的離線降級。細節見 [`docs/phase6/remote_acceptance_report.md`](docs/phase6/remote_acceptance_report.md)。

@@ -20,6 +20,7 @@ import {
   loadRealCatalog,
 } from "./lib/dataLoader";
 import { AdvancedPages } from "./pages/AdvancedPages";
+import { CandidateRiskPage } from "./pages/CandidateRiskPage";
 import { DataUpdatePage } from "./pages/DataUpdatePage";
 import { DecisionSupportPage } from "./pages/DecisionSupportPage";
 import { DomainHomePage } from "./pages/DomainHomePage";
@@ -50,6 +51,7 @@ const VALID_PAGE_IDS = new Set<PageId>([
   "domain_home",
   "live_forecast",
   "decision_support",
+  "candidate_risk",
   "data_update",
   "explorer",
   "model_lifecycle",
@@ -337,7 +339,7 @@ export const App: React.FC = () => {
             此頁只有真實資料
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            「決策輔助」與羊舍專屬 5 頁僅使用真實感測資料，不支援合成展示資料。請切換回真實資料模式後再檢視內容。
+            「決策輔助」、「候選風險決策」與羊舍專屬 5 頁僅使用真實感測資料，不支援合成展示資料。請切換回真實資料模式後再檢視內容。
           </p>
           <div>
             <button
@@ -399,6 +401,7 @@ export const App: React.FC = () => {
             health={health}
             adminRole={adminRole}
             onLiveBannerChange={setLiveBannerKind}
+            precomputedForecasts={precomputedForecasts}
           />
         );
       case "decision_support":
@@ -407,6 +410,17 @@ export const App: React.FC = () => {
             datasets={datasets}
             datasetId={activeDataset.id}
             onSelectDataset={handleChangeDataset}
+          />
+        );
+      case "candidate_risk":
+        return (
+          <CandidateRiskPage
+            datasets={datasets}
+            datasetId={activeDataset.id}
+            onSelectDataset={handleChangeDataset}
+            precomputedForecasts={precomputedForecasts}
+            anomaliesMap={anomaliesMap}
+            onNavigate={handleNavigate}
           />
         );
       case "data_update":

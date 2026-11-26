@@ -33,6 +33,7 @@ import type {
   LiveVersionsResponse,
   LiveWriteResult,
   ModelKey,
+  PrecomputedForecasts,
   RealDataset,
 } from "../../contracts/types";
 import {
@@ -69,6 +70,7 @@ import {
   type LiveBannerKind,
 } from "../lib/liveForecast";
 import { formatChartTimeLabel } from "../lib/trendChart";
+import { DemoImportSimulation } from "./DemoImportSimulation";
 import type { AdminRoleStatus, ApiHealthStatus } from "../types/app";
 
 interface LiveForecastPageProps {
@@ -78,6 +80,8 @@ interface LiveForecastPageProps {
   health: ApiHealthStatus | null;
   adminRole: AdminRoleStatus;
   onLiveBannerChange: (kind: LiveBannerKind) => void;
+  /** 預先準備的資料（離線展示：模擬新資料匯入）；沒有也不影響即時模式 */
+  precomputedForecasts?: PrecomputedForecasts | null;
 }
 
 type MarkerShape = "circle" | "square" | "triangle" | "diamond" | "cross" | "star";
@@ -266,6 +270,7 @@ export const LiveForecastPage: React.FC<LiveForecastPageProps> = ({
   health,
   adminRole,
   onLiveBannerChange,
+  precomputedForecasts,
 }) => {
   const activeDataset = datasets.find((d) => d.id === datasetId);
 
@@ -851,10 +856,21 @@ export const LiveForecastPage: React.FC<LiveForecastPageProps> = ({
           <p className="text-sm text-slate-700 break-words">{offlineMessage}</p>
           {!statusIsFormatError && (
             <p className="text-xs text-slate-500">
-              依資料誠實政策，引擎尚未連線時不會以離線預計算輸出充當即時預測。請確認分析引擎已連線後再試。
+              依資料誠實政策，引擎尚未連線時不會以離線預計算輸出充當即時預測。請確認分析引擎已連線後再試；
+              在那之前，可以使用下方「展示：模擬新資料匯入」——它使用預先準備好的資料，並明確標示為展示。
             </p>
           )}
         </section>
+      )}
+
+      {/* 沒有即時資料流時：預先準備好的資料＋模擬新資料匯入（展示；不是即時） */}
+      {!loading && !status && (
+        <DemoImportSimulation
+          datasets={datasets}
+          datasetId={datasetId}
+          onSelectDataset={onSelectDataset}
+          precomputedForecasts={precomputedForecasts ?? null}
+        />
       )}
 
       {/* Connected Status & Data Sections */}

@@ -10,6 +10,7 @@ export const SHEEP_ONLY_PAGES: ReadonlySet<PageId> = new Set<PageId>([
 
 export const REAL_ONLY_GUARDED_PAGES: ReadonlySet<PageId> = new Set<PageId>([
   "decision_support",
+  "candidate_risk",
   "sheep_risk",
   "sheep_actions",
   "sheep_diagnosis",
