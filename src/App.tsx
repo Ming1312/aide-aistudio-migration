@@ -20,7 +20,7 @@ import {
   loadRealCatalog,
 } from "./lib/dataLoader";
 import { AdvancedPages } from "./pages/AdvancedPages";
-import { CandidateRiskPage } from "./pages/CandidateRiskPage";
+import { DomainDecisionPages } from "./pages/DomainDecisionPages";
 import { DataUpdatePage } from "./pages/DataUpdatePage";
 import { DecisionSupportPage } from "./pages/DecisionSupportPage";
 import { DomainHomePage } from "./pages/DomainHomePage";
@@ -31,7 +31,6 @@ import { OverviewPage } from "./pages/OverviewPage";
 import { SheepDecisionPages } from "./pages/SheepDecisionPages";
 import {
   isRealOnlyGuardedPage,
-  SHEEP_ONLY_PAGES,
 } from "./lib/dataKindPolicy";
 import type { LiveBannerKind } from "./lib/liveForecast";
 import type {
@@ -51,7 +50,6 @@ const VALID_PAGE_IDS = new Set<PageId>([
   "domain_home",
   "live_forecast",
   "decision_support",
-  "candidate_risk",
   "data_update",
   "explorer",
   "model_lifecycle",
@@ -241,38 +239,23 @@ export const App: React.FC = () => {
   const handleChangeDataset = useCallback(
     (nextId: string) => {
       setDatasetId(nextId);
-      if (nextId !== "sheep_barn" && SHEEP_ONLY_PAGES.has(activePage)) {
-        setActivePage("domain_home");
-      }
     },
-    [activePage]
+    []
   );
 
   const handleSelectDomainAndNavigate = useCallback(
     (nextId: string, targetPage: PageId) => {
       setDatasetId(nextId);
-      if (nextId !== "sheep_barn" && SHEEP_ONLY_PAGES.has(targetPage)) {
-        setActivePage("domain_home");
-      } else {
-        setActivePage(targetPage);
-      }
+      setActivePage(targetPage);
     },
     []
   );
 
   const handleNavigate = useCallback(
     (page: PageId) => {
-      if (
-        datasetId !== "sheep_barn" &&
-        SHEEP_ONLY_PAGES.has(page) &&
-        dataKind !== "synthetic"
-      ) {
-        setActivePage("domain_home");
-        return;
-      }
       setActivePage(page);
     },
-    [datasetId, dataKind]
+    []
   );
 
   const handleUpdateCheckedDomain = useCallback(
@@ -339,19 +322,13 @@ export const App: React.FC = () => {
             此頁只有真實資料
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            「決策輔助」、「候選風險決策」與羊舍專屬 5 頁僅使用真實感測資料，不支援合成展示資料。請切換回真實資料模式後再檢視內容。
+            「決策輔助」與「場域決策」5 頁（風險評估、處置決策、異常診斷、AI 預測、歷史回放）僅使用真實感測資料，不支援合成展示資料。請切換回真實資料模式後再檢視內容。
           </p>
           <div>
             <button
               type="button"
               onClick={() => {
                 setDataKind("real");
-                if (
-                  SHEEP_ONLY_PAGES.has(activePage) &&
-                  activeDataset.id !== "sheep_barn"
-                ) {
-                  setDatasetId("sheep_barn");
-                }
               }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#0B63CE] text-white text-sm font-medium hover:bg-[#0952AD]"
             >
@@ -412,17 +389,6 @@ export const App: React.FC = () => {
             onSelectDataset={handleChangeDataset}
           />
         );
-      case "candidate_risk":
-        return (
-          <CandidateRiskPage
-            datasets={datasets}
-            datasetId={activeDataset.id}
-            onSelectDataset={handleChangeDataset}
-            precomputedForecasts={precomputedForecasts}
-            anomaliesMap={anomaliesMap}
-            onNavigate={handleNavigate}
-          />
-        );
       case "data_update":
         return currentSyntheticState ? (
           <DataUpdatePage
@@ -461,14 +427,12 @@ export const App: React.FC = () => {
           );
         }
         return (
-          <DomainHomePage
-            dataKind={dataKind}
+          <DomainDecisionPages
+            page={activePage}
             dataset={activeDataset}
-            anomalies={anomaliesMap[activeDataset.id]}
             precomputedForecasts={precomputedForecasts}
+            anomalies={anomaliesMap[activeDataset.id]}
             health={health}
-            onNavigate={handleNavigate}
-            onOpenExplain={setExplainPayload}
           />
         );
       case "catalog":

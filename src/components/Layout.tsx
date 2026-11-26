@@ -42,15 +42,14 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "domain_home", label: "場域看板", tier: "daily" },
   { id: "live_forecast", label: "即時預測", tier: "daily" },
   { id: "decision_support", label: "決策輔助", tier: "daily" },
-  { id: "candidate_risk", label: "候選風險決策", tier: "daily" },
   { id: "data_update", label: "資料更新", tier: "daily", syntheticAllowed: true },
   { id: "explorer", label: "資料探索與分析", tier: "daily" },
   { id: "model_lifecycle", label: "模型維護", tier: "daily" },
-  // 羊舍決策（僅 sheep_barn 顯示）
+  // 場域決策（七個場域都有；羊舍是凍結的正式引擎輸出，其餘為研究預測＋假定門檻）
   { id: "sheep_risk", label: "風險評估", tier: "sheep" },
   { id: "sheep_actions", label: "處置決策", tier: "sheep" },
   { id: "sheep_diagnosis", label: "異常診斷", tier: "sheep" },
-  { id: "sheep_forecast", label: "羊舍 AI 預測", tier: "sheep" },
+  { id: "sheep_forecast", label: "AI 預測", tier: "sheep" },
   { id: "sheep_replay", label: "歷史回放", tier: "sheep" },
   // 進階研究
   { id: "catalog", label: "場域目錄", tier: "advanced" },
@@ -67,7 +66,6 @@ const NAV_ICONS: Record<PageId, React.ReactNode> = {
   domain_home: <Activity className="h-4 w-4" />,
   live_forecast: <Radio className="h-4 w-4" />,
   decision_support: <Sparkles className="h-4 w-4" />,
-  candidate_risk: <ShieldAlert className="h-4 w-4" />,
   data_update: <Database className="h-4 w-4" />,
   explorer: <BarChart3 className="h-4 w-4" />,
   model_lifecycle: <Wrench className="h-4 w-4" />,
@@ -272,10 +270,9 @@ export const Layout: React.FC<LayoutProps> = ({
               isNavItemVisible(i.id, i.tier, dataKind, datasetId)
           )
         )}
-        {isSheep &&
-          dataKind === "real" &&
+        {dataKind === "real" &&
           renderNavSection(
-            "羊舍決策（專屬）",
+            isSheep ? "場域決策（羊舍：正式引擎）" : "場域決策（假定門檻）",
             NAV_ITEMS.filter((i) => i.tier === "sheep")
           )}
         {renderNavSection(

@@ -301,7 +301,7 @@ export const DemoImportSimulation: React.FC<Props> = ({
               候選風險（假定門檻：注意 {policy.caution}、警戒 {policy.alarm} {policy.unit}）：現值
               {risk.current !== null ? LEVEL_TEXT[classify(risk.current, policy)] : "—"}，預測
               {risk.forecast !== null ? LEVEL_TEXT[classify(risk.forecast, policy)] : "—"}。
-              完整流程見「候選風險決策」頁；門檻未經確認。
+              完整流程見「場域決策」的「風險評估」「歷史回放」；門檻未經確認。
             </div>
           )}
 

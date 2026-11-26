@@ -19,7 +19,6 @@ export type PageId =
   | "domain_home"
   | "live_forecast"
   | "decision_support"
-  | "candidate_risk"
   | "data_update"
   | "explorer"
   | "model_lifecycle"

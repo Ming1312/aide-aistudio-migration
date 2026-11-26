@@ -10,7 +10,6 @@ export const SHEEP_ONLY_PAGES: ReadonlySet<PageId> = new Set<PageId>([
 
 export const REAL_ONLY_GUARDED_PAGES: ReadonlySet<PageId> = new Set<PageId>([
   "decision_support",
-  "candidate_risk",
   "sheep_risk",
   "sheep_actions",
   "sheep_diagnosis",
@@ -41,7 +40,8 @@ export function isNavItemVisible(
   datasetId: string
 ): boolean {
   if (tier === "sheep") {
-    return datasetId === "sheep_barn" && globalDataKind === "real";
+    // 「場域決策」5 頁：七個場域都有（羊舍＝正式引擎輸出；其餘＝研究預測＋假定門檻），只有真實資料模式
+    return globalDataKind === "real";
   }
   if (globalDataKind === "synthetic" && REAL_ONLY_GUARDED_PAGES.has(itemId)) {
     return false;
