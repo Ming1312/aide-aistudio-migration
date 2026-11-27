@@ -1,4 +1,5 @@
 import type { AdminRole } from "../types/app";
+import type { ThresholdTable } from "./thresholds";
 import type {
   AnomaliesResponse,
   DecisionExplainResponse,
@@ -103,6 +104,10 @@ export function loadPrecomputedAnomalies(): Promise<PrecomputedAnomalies> {
   return fetchJsonCached<PrecomputedAnomalies>(
     "/data/real_public/precomputed/anomalies.json"
   );
+}
+
+export function loadPrecomputedThresholds(): Promise<ThresholdTable> {
+  return fetchJsonCached<ThresholdTable>("/data/real_public/precomputed/thresholds.json");
 }
 
 export function loadPrecomputedFormalSheep(): Promise<PrecomputedFormalSheep> {

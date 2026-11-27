@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight, Lock, RefreshCw, Unlock } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
-import { ASSUMED_BADGE, CANDIDATE_POLICIES } from "../lib/candidateRisk";
+import { CANDIDATE_POLICIES } from "../lib/candidateRisk";
+import { DEFAULT_PCT, PCT_MAX, PCT_MIN, validPct, type Pct, type ThresholdMap } from "../lib/thresholds";
 import { loadDataUseStatement } from "../lib/dataLoader";
 import type { ThresholdOverrides } from "../lib/status";
 import type { EngineState } from "../lib/useEngine";
@@ -17,6 +18,11 @@ interface Props {
   adminRole: AdminRoleStatus;
   onOpenAdmin: () => void;
   canEditThresholds: boolean;
+  /** 實際使用的門檻（管理員調整 ＞ 歷史計算 ＞ 假定值）與純歷史計算的門檻 */
+  thresholds: ThresholdMap;
+  historyThresholds: ThresholdMap;
+  pct: Pct;
+  onChangePct: (next: Pct) => void;
   /** null = 這個角色看不到引擎狀態 */
   engine: EngineState | null;
 }
@@ -43,8 +49,16 @@ export const SettingsPage: React.FC<Props> = ({
   adminRole,
   onOpenAdmin,
   canEditThresholds,
+  thresholds,
+  historyThresholds,
+  pct,
+  onChangePct,
   engine,
 }) => {
+  const [pctDraft, setPctDraft] = useState({ caution: String(Math.round(pct.caution * 1000) / 10), alarm: String(Math.round(pct.alarm * 1000) / 10) });
+  const draftPct: Pct = { caution: Number(pctDraft.caution) / 100, alarm: Number(pctDraft.alarm) / 100 };
+  const draftOk = validPct(draftPct);
+  const draftChanged = draftOk && (draftPct.caution !== pct.caution || draftPct.alarm !== pct.alarm);
   const [statement, setStatement] = useState<string | null>(null);
   const [wantStatement, setWantStatement] = useState(false);
   useEffect(() => {
@@ -59,8 +73,8 @@ export const SettingsPage: React.FC<Props> = ({
     if (!base) return;
     const v = Number(raw);
     if (!Number.isFinite(v)) return;
-    const cur = overrides[id] ?? { caution: base.caution, alarm: base.alarm };
-    onChangeOverrides({ ...overrides, [id]: { ...cur, [field]: v } });
+    const cur = overrides[id] ?? thresholds[id] ?? { caution: base.caution, alarm: base.alarm };
+    onChangeOverrides({ ...overrides, [id]: { caution: cur.caution, alarm: cur.alarm, [field]: v } });
   };
   const reset = (id: string) => {
     const { [id]: _drop, ...rest } = overrides;
@@ -140,7 +154,63 @@ export const SettingsPage: React.FC<Props> = ({
         </Card>
       )}
 
-      <Card title="風險門檻" right={<span className="text-[10px] text-slate-500">{canEditThresholds ? ASSUMED_BADGE : "修改需要管理員身分"}</span>}>
+      <Card
+        title="風險門檻"
+        right={<span className="text-[10px] text-slate-500">{canEditThresholds ? "預設由歷史資料計算，可手動調整" : "預設由歷史資料計算；修改需要管理員身分"}</span>}
+      >
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-2 mb-3" data-testid="pct-controls">
+          <label className="text-xs text-slate-600">
+            注意百分位（%）
+            <input
+              type="number"
+              step="0.5"
+              min={PCT_MIN * 100}
+              max={PCT_MAX * 100}
+              value={pctDraft.caution}
+              disabled={!canEditThresholds}
+              aria-label="注意百分位"
+              onChange={(e) => setPctDraft((d) => ({ ...d, caution: e.target.value }))}
+              className="block mt-0.5 w-20 rounded border border-slate-300 px-2 py-1 text-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-500"
+            />
+          </label>
+          <label className="text-xs text-slate-600">
+            警戒百分位（%）
+            <input
+              type="number"
+              step="0.5"
+              min={PCT_MIN * 100}
+              max={PCT_MAX * 100}
+              value={pctDraft.alarm}
+              disabled={!canEditThresholds}
+              aria-label="警戒百分位"
+              onChange={(e) => setPctDraft((d) => ({ ...d, alarm: e.target.value }))}
+              className="block mt-0.5 w-20 rounded border border-slate-300 px-2 py-1 text-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-500"
+            />
+          </label>
+          {canEditThresholds && (
+            <>
+              <button
+                type="button"
+                disabled={!draftChanged}
+                onClick={() => onChangePct(draftPct)}
+                className="px-3 py-1.5 rounded-md bg-[#0B63CE] text-white text-xs font-semibold disabled:opacity-40"
+              >
+                套用
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChangePct(DEFAULT_PCT);
+                  setPctDraft({ caution: "90", alarm: "97.5" });
+                }}
+                className="text-xs text-slate-500 hover:underline"
+              >
+                恢復 P90／P97.5
+              </button>
+              {!draftOk && <span className="text-xs text-red-700">需 {PCT_MIN * 100}～{PCT_MAX * 100}，且警戒 ≥ 注意</span>}
+            </>
+          )}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm" data-testid="threshold-table">
             <thead>
@@ -149,6 +219,7 @@ export const SettingsPage: React.FC<Props> = ({
                 <th className="py-1 pr-3 font-medium">感測器</th>
                 <th className="py-1 pr-3 font-medium">注意</th>
                 <th className="py-1 pr-3 font-medium">警戒</th>
+                <th className="py-1 font-medium">來源</th>
                 <th />
               </tr>
             </thead>
@@ -159,13 +230,15 @@ export const SettingsPage: React.FC<Props> = ({
                   return (
                     <tr key={d.id} className="border-t border-slate-100 text-slate-400">
                       <td className="py-1.5 pr-3">{d.display_name.split("（")[0]}</td>
-                      <td colSpan={4}>無風險模型</td>
+                      <td colSpan={5}>無風險模型</td>
                     </tr>
                   );
                 }
                 const o = overrides[d.id];
+                const eff = thresholds[d.id] ?? { caution: p.caution, alarm: p.alarm, source: undefined, note: "假定值（沒有歷史資料可算）" };
+                const hist = historyThresholds[d.id];
                 return (
-                  <tr key={d.id} className="border-t border-slate-100">
+                  <tr key={d.id} className="border-t border-slate-100" data-source={o ? "admin" : hist ? "history" : "assumed"}>
                     <td className="py-1.5 pr-3 text-slate-900">{d.display_name.split("（")[0]}</td>
                     <td className="py-1.5 pr-3 text-slate-600">
                       {p.sensor} <span className="text-slate-400">{p.unit}</span> <span className="text-slate-400">{p.direction === "above" ? "↑" : "↓"}</span>
@@ -176,14 +249,34 @@ export const SettingsPage: React.FC<Props> = ({
                           type="number"
                           step="any"
                           aria-label={`${d.display_name} ${f === "caution" ? "注意" : "警戒"}`}
-                          value={o ? o[f] : p[f]}
+                          value={eff[f]}
                           disabled={!canEditThresholds}
                           onChange={(e) => setThreshold(d.id, f, e.target.value)}
                           className={`w-20 rounded border px-2 py-1 text-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-500 ${o ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300"}`}
                         />
                       </td>
                     ))}
-                    <td className="py-1.5">{o && canEditThresholds && <button type="button" onClick={() => reset(d.id)} className="text-xs text-slate-500 hover:underline">重設</button>}</td>
+                    <td className="py-1.5 pr-2 text-[11px] text-slate-500 max-w-[14rem]">
+                      {o ? (
+                        <span>
+                          管理員調整
+                          {hist && (
+                            <span className="text-slate-400">
+                              （歷史計算：{hist.caution}／{hist.alarm}）
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        eff.note
+                      )}
+                    </td>
+                    <td className="py-1.5">
+                      {o && canEditThresholds && (
+                        <button type="button" onClick={() => reset(d.id)} className="text-xs text-[#0B63CE] hover:underline whitespace-nowrap">
+                          {hist ? "重設為歷史計算" : "重設"}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -196,7 +289,8 @@ export const SettingsPage: React.FC<Props> = ({
         <div className="space-y-2" data-testid="principles">
           <Fold title="安全等級怎麼來">
             <p>每個場域用一個代表感測器，搭配「注意」「警戒」兩條門檻。取「現在」「+1 小時」「+3 小時」中最嚴重的一個當整體等級。</p>
-            <p>感測器可信度不足時，改顯示「先確認資料」，避免依壞資料做決策。門檻是假定值，沒有經過資料提供者確認。</p>
+            <p>感測器可信度不足時，改顯示「先確認資料」，避免依壞資料做決策。</p>
+            <p>門檻預設由該感測器的歷史資料算出：注意＝第 90 百分位、警戒＝第 97.5 百分位（越低越危險的感測器取對稱的下尾），略過偵測器標出的斷電歸零時段。這是「統計上多罕見」，不是安全標準，也不是資料提供者確認的值；整段歷史都拿來算，所以對歷史資料本身是樣本內的結果。管理員可以改百分位或直接改數字；匯入新資料後會用合併資料重算。</p>
           </Fold>
           <Fold title="預測怎麼算">
             <p>預設使用預先算好的研究預測（六種方法，預設該任務最佳的基準）。匯入新資料後，改在瀏覽器內用簡易基準預測（持續性）。</p>

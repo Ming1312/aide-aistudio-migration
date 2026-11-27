@@ -11,7 +11,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ASSUMED_BADGE } from "../lib/candidateRisk";
 import { askAi, type AiResult } from "../lib/ai";
 import { analyzeLocal, buildDomainFacts } from "../lib/qa";
 import { loadJson, saveJson } from "../lib/storage";
@@ -203,8 +202,8 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData, canRe
       <Card
         title={`${policy.sensor}（${status.unit}）`}
         right={
-          <span className="text-[10px] text-slate-500" title={ASSUMED_BADGE}>
-            門檻：注意 {policy.caution}／警戒 {policy.alarm}（假定）
+          <span className="text-[10px] text-slate-500" title={status.thresholdNote} data-testid="threshold-label">
+            門檻：注意 {policy.caution}／警戒 {policy.alarm}（{status.thresholdSource === "history" ? "歷史百分位" : status.thresholdSource === "admin" ? "管理員調整" : "假定值"}）
           </span>
         }
       >

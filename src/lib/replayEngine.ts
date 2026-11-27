@@ -234,7 +234,7 @@ export function buildReplayRows(
       reasons.push(`校正資料不足（已抵達殘差 ${matured.length} 筆 < ${MIN_CAL}）：不顯示區間與機率`);
     }
     if (pAlarm !== null) reasons.push(`P(${policy.sensor} ${dirWord} ${policy.alarm}（警戒線）) ≈ ${pAlarm.toFixed(2)}`);
-    reasons.push(`注意線 ${policy.caution}、警戒線 ${policy.alarm} ${policy.unit} 為假定值，未經資料提供者確認`);
+    reasons.push(`注意線 ${policy.caution}、警戒線 ${policy.alarm} ${policy.unit} （門檻來源見「設定」；不是安全標準，未經資料提供者確認）`);
     rows.push({
       idx: i,
       asOf,

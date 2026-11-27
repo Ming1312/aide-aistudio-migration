@@ -8,11 +8,13 @@ import {
   fetchAdminRole,
   loadPrecomputedAnomalies,
   loadPrecomputedForecasts,
+  loadPrecomputedThresholds,
   loadRealCatalog,
   loadRealCsv,
 } from "./lib/dataLoader";
 import { mergeRows } from "./lib/liveSeries";
 import { CANDIDATE_POLICIES, findTask } from "./lib/candidateRisk";
+import { DEFAULT_PCT, resolveThresholds, validPct, validValues, type Pct, type ThresholdTable } from "./lib/thresholds";
 import { loadJson, saveJson } from "./lib/storage";
 import { computeDomainStatus, maskOutageRows, type StatusInput, type ThresholdOverrides } from "./lib/status";
 import { useEngine } from "./lib/useEngine";
@@ -27,6 +29,7 @@ import type { AdminRoleStatus, ParsedCsvRow, PageId } from "./types/app";
 const VALID_PAGES = new Set<PageId>(["overview", "data", "decision", "import", "settings"]);
 const OVERRIDES_KEY = "aide.thresholds.v1";
 const DEFAULT_DS_KEY = "aide.defaultDataset.v1";
+const PCT_KEY = "aide.thresholdPct.v1";
 
 function readInitialRoute(): { page: PageId; dataset: string | null } {
   const params = new URLSearchParams(window.location.search);
@@ -49,6 +52,11 @@ export const App: React.FC = () => {
   const [datasetId, setDatasetId] = useState<string>(initialRoute.dataset || loadJson<string>(DEFAULT_DS_KEY, "sheep_barn"));
   const [activePage, setActivePage] = useState<PageId>(initialRoute.page);
   const [overrides, setOverrides] = useState<ThresholdOverrides>(() => loadJson<ThresholdOverrides>(OVERRIDES_KEY, {}));
+  const [thresholdTable, setThresholdTable] = useState<ThresholdTable | null>(null);
+  const [pct, setPct] = useState<Pct>(() => {
+    const p = loadJson<Pct>(PCT_KEY, DEFAULT_PCT);
+    return validPct(p) ? p : DEFAULT_PCT;
+  });
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [baseRows, setBaseRows] = useState<Record<string, ParsedCsvRow[]>>({});
 
@@ -63,8 +71,10 @@ export const App: React.FC = () => {
       loadPrecomputedAnomalies(),
       loadPrecomputedForecasts(),
       fetchAdminRole().catch(() => ({ configured: false, role: "viewer" as const })),
+      loadPrecomputedThresholds().catch(() => null),
     ])
-      .then(([cat, anom, fc, role]) => {
+      .then(([cat, anom, fc, role, thr]) => {
+        if (!cancelled) setThresholdTable(thr);
         if (cancelled) return;
         setCatalog(cat);
         setAnomaliesMap(anom.datasets ?? {});
@@ -110,6 +120,20 @@ export const App: React.FC = () => {
   const datasets = useMemo(() => catalog?.datasets ?? [], [catalog]);
   const activeDataset = datasets.find((d) => d.id === datasetId) ?? datasets[0];
 
+  // 風險門檻：管理員調整 ＞ 歷史百分位計算（匯入資料後以合併資料精確重算）＞ 程式內的假定值
+  const thresholds = useMemo(() => {
+    const exact: Record<string, { values: number[]; from: string; to: string; direction: "above" | "below" }> = {};
+    for (const ds of datasets) {
+      const p = CANDIDATE_POLICIES[ds.id];
+      const imp = importer.imported[ds.id];
+      const base = baseRows[ds.id];
+      if (!p || !imp || imp.length === 0 || !base) continue;
+      const v = validValues(mergeRows(base, imp), p.sensor, anomaliesMap[ds.id]?.events ?? []);
+      exact[ds.id] = { values: v.values, from: v.from, to: v.to, direction: p.direction };
+    }
+    return resolveThresholds({ datasetIds: datasets.map((d) => d.id), table: thresholdTable, pct, admin: overrides, exact });
+  }, [datasets, thresholdTable, pct, overrides, importer.imported, baseRows, anomaliesMap]);
+
   const inputs = useMemo(() => {
     const m = new Map<string, StatusInput>();
     for (const ds of datasets) {
@@ -119,7 +143,7 @@ export const App: React.FC = () => {
         dataset: ds,
         forecasts,
         anomalies: anomaliesMap[ds.id],
-        overrides,
+        overrides: thresholds.effective,
         // 匯入資料比原始資料更新時才改用匯入資料做預測（內容相同的重複匯入不降低預測品質）；
         // 沒有預計算預測的場域（資料不完整）一律用原始＋匯入資料建立簡易預測
         ...(() => {
@@ -135,7 +159,7 @@ export const App: React.FC = () => {
       });
     }
     return m;
-  }, [datasets, forecasts, anomaliesMap, overrides, importer.imported, baseRows, engine.data, baselineIds]);
+  }, [datasets, forecasts, anomaliesMap, thresholds, importer.imported, baseRows, engine.data, baselineIds]);
 
   const statuses = useMemo(() => datasets.map((d) => computeDomainStatus(inputs.get(d.id)!)), [datasets, inputs]);
 
@@ -152,6 +176,10 @@ export const App: React.FC = () => {
   const changeOverrides = useCallback((next: ThresholdOverrides) => {
     setOverrides(next);
     saveJson(OVERRIDES_KEY, next);
+  }, []);
+  const changePct = useCallback((next: Pct) => {
+    setPct(next);
+    saveJson(PCT_KEY, next);
   }, []);
   const changeDefault = useCallback((id: string) => {
     setDatasetId(id);
@@ -207,6 +235,10 @@ export const App: React.FC = () => {
             adminRole={adminRole}
             onOpenAdmin={() => setAdminModalOpen(true)}
             canEditThresholds={can(adminRole.role, "edit_thresholds")}
+            thresholds={thresholds.effective}
+            historyThresholds={thresholds.history}
+            pct={pct}
+            onChangePct={changePct}
             engine={can(adminRole.role, "view_engine") ? engine : null}
           />
         );

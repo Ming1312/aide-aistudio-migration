@@ -7,7 +7,7 @@ export function statusLine(s: DomainStatus): string {
   const hs = s.horizons
     .map((h) => `${h.h} 小時後預測 ${fmtVal(h.point)} ${s.unit}（${SAFETY_TEXT[h.level]}${h.pCaution !== null ? `，越過注意線機率 ${Math.round(h.pCaution * 100)}%` : ""}）`)
     .join("；");
-  return `${s.name}：${s.policy.sensor} 目前 ${fmtVal(s.current)} ${s.unit}；${hs}；整體${SAFETY_TEXT[s.level]}（注意線 ${s.policy.caution}、警戒線 ${s.policy.alarm}，假定門檻）`;
+  return `${s.name}：${s.policy.sensor} 目前 ${fmtVal(s.current)} ${s.unit}；${hs}；整體${SAFETY_TEXT[s.level]}（注意線 ${s.policy.caution}、警戒線 ${s.policy.alarm}；${s.thresholdSource === "history" ? "歷史百分位" : s.thresholdSource === "admin" ? "管理員調整" : "假定值"}）`;
 }
 
 /** 一行精簡版（問答清單用） */
@@ -73,7 +73,7 @@ export function answerLocal(question: string, list: DomainStatus[]): LocalAnswer
   }
   if (risky.length === 0) {
     return {
-      text: `未來 1–3 小時各場域預測都未超過假定門檻（${withModel.length} 個有模型的場域）。這不代表設備或環境正常。`,
+      text: `未來 1–3 小時各場域預測都未超過門檻（${withModel.length} 個有模型的場域）。這不代表設備或環境正常。`,
       focusId: null,
     };
   }

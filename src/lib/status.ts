@@ -38,6 +38,9 @@ export const STATUS_HORIZONS = [1, 3] as const;
 export interface Threshold {
   caution: number;
   alarm: number;
+  /** 這組門檻的來源：歷史百分位計算、管理員調整；沒有就是程式內的假定值 */
+  source?: "history" | "admin";
+  note?: string;
 }
 export type ThresholdOverrides = Record<string, Threshold>;
 
@@ -69,6 +72,9 @@ export interface DomainStatus {
   horizons: HorizonView[];
   level: Safety;
   source: "precomputed" | "import" | "engine" | "baseline";
+  /** 風險門檻來源與說明（歷史百分位／管理員調整／假定值） */
+  thresholdSource: "history" | "admin" | "assumed";
+  thresholdNote: string;
   /** 資料不完整時的提醒（例如只有 387 列、涵蓋 17.6%）；完整時為 null */
   incomplete: string | null;
   /** 引擎資料流是模擬（合成）資料時為 true */
@@ -154,6 +160,16 @@ export function taskFor(
 }
 
 export function computeDomainStatus(input: StatusInput): DomainStatus {
+  const s = computeCore(input);
+  const o = input.overrides?.[input.dataset.id];
+  if (s.policy) {
+    s.thresholdSource = o?.source ?? (o ? "admin" : "assumed");
+    s.thresholdNote = o?.note ?? (o ? "管理員調整" : "假定值（沒有歷史資料可算）");
+  }
+  return s;
+}
+
+function computeCore(input: StatusInput): DomainStatus {
   const { dataset } = input;
   const base = CANDIDATE_POLICIES[dataset.id];
   const empty: DomainStatus = {
@@ -171,6 +187,8 @@ export function computeDomainStatus(input: StatusInput): DomainStatus {
     horizons: [],
     level: "none",
     source: "precomputed",
+    thresholdSource: "assumed",
+    thresholdNote: "",
     incomplete: null,
     synthetic: false,
     reliability: "reliable",
@@ -233,6 +251,8 @@ export function computeDomainStatus(input: StatusInput): DomainStatus {
     horizons,
     level,
     source,
+    thresholdSource: "assumed",
+    thresholdNote: "",
     incomplete: source === "baseline" ? incompleteNote(input.dataset, input.maskedRows) : null,
     synthetic: false,
     reliability: lastRow.reliability,

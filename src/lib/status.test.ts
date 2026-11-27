@@ -145,3 +145,75 @@ test("引擎即時：資料過時或有旗標 → 先確認資料；匯入資料
   noTask.forecast.tasks = [];
   assert.equal(computeDomainStatus(input("sheep_barn", { engine: noTask })).source, "precomputed");
 });
+
+// ---- 歷史百分位門檻
+import { DEFAULT_PCT, GRID, buildEntry, computeFromValues, fromEntry, quantile, quantileFromGrid, resolveThresholds, validValues, validPct, type ThresholdTable } from "./thresholds.ts";
+
+const thrTable = JSON.parse(readFileSync("public/data/real_public/precomputed/thresholds.json", "utf-8")) as ThresholdTable;
+
+test("quantile／computeFromValues：已知答案；越低越危險取對稱下尾；樣本不足或百分位不合法回 null", () => {
+  const v = Array.from({ length: 101 }, (_, i) => i); // 0..100
+  assert.equal(quantile(v, 0.9), 90);
+  assert.equal(quantile(v, 0.975), 97.5);
+  const up = computeFromValues(v, "above")!;
+  assert.deepEqual([up.caution, up.alarm], [90, 97.5]);
+  const down = computeFromValues(v, "below")!;
+  assert.deepEqual([down.caution, down.alarm], [10, 2.5]);
+  assert.equal(computeFromValues(v.slice(0, 20), "above"), null);
+  assert.equal(computeFromValues(v, "above", { caution: 0.99, alarm: 0.9 }), null);
+  assert.equal(validPct({ caution: 0.4, alarm: 0.9 }), false);
+  assert.equal(validPct(DEFAULT_PCT), true);
+});
+
+test("thresholds.json 沒有過期：與 CSV 重算的結果一致；方向正確（above：警戒≥注意；below：警戒≤注意）", () => {
+  const events = (id: string) => anomalies.datasets[id]?.events ?? [];
+  for (const ds of catalog.datasets) {
+    const e = thrTable.datasets[ds.id];
+    assert.ok(e, ds.id);
+    const rows = parseCsvText(readFileSync(`public/data/real_public/${ds.id}.csv`, "utf-8"), "__real").rows;
+    const fresh = buildEntry(e.sensor, e.direction, validValues(rows, e.sensor, events(ds.id)));
+    assert.equal(fresh.n, e.n, ds.id);
+    for (const g of GRID) assert.ok(Math.abs(fresh.grid[String(g)] - e.grid[String(g)]) < 1e-6, `${ds.id} P${g}`);
+    const t = fromEntry(e)!;
+    assert.ok(t, ds.id);
+    if (e.direction === "above") assert.ok(t.alarm >= t.caution, ds.id);
+    else assert.ok(t.alarm <= t.caution, ds.id);
+  }
+  assert.ok(thrTable.datasets["rearing_plant_1_north"].excluded > 0, "北側的斷電歸零時段被略過");
+});
+
+test("格點內插與精確計算相近（P92.5 落在 P90 與 P95 之間）", () => {
+  const e = thrTable.datasets["sheep_barn"];
+  const mid = quantileFromGrid(e, 0.925);
+  assert.ok(mid >= e.grid["0.9"] && mid <= e.grid["0.95"]);
+  assert.equal(quantileFromGrid(e, 0.999), e.grid["0.99"]);
+});
+
+test("門檻優先順序：管理員調整 ＞ 歷史計算；匯入後以合併資料精確重算；沒有歷史表時不產生歷史門檻", () => {
+  const ids = ["sheep_barn", "expert_system_c22"];
+  const r1 = resolveThresholds({ datasetIds: ids, table: thrTable, pct: DEFAULT_PCT, admin: {} });
+  assert.equal(r1.effective.sheep_barn.source, "history");
+  assert.equal(r1.effective.sheep_barn.caution, r1.history.sheep_barn.caution);
+  const r2 = resolveThresholds({ datasetIds: ids, table: thrTable, pct: DEFAULT_PCT, admin: { sheep_barn: { caution: 90, alarm: 95 } } });
+  assert.equal(r2.effective.sheep_barn.source, "admin");
+  assert.equal(r2.effective.sheep_barn.caution, 90);
+  assert.equal(r2.history.sheep_barn.source, "history"); // 純歷史值仍可顯示
+  assert.equal(r2.effective.expert_system_c22.source, "history");
+  const vals = Array.from({ length: 100 }, (_, i) => i);
+  const r3 = resolveThresholds({ datasetIds: ["sheep_barn"], table: thrTable, pct: DEFAULT_PCT, admin: {}, exact: { sheep_barn: { values: vals, from: "a", to: "b", direction: "above" } } });
+  assert.equal(r3.effective.sheep_barn.caution, 89.1);
+  const r4 = resolveThresholds({ datasetIds: ids, table: null, pct: DEFAULT_PCT, admin: {} });
+  assert.deepEqual(Object.keys(r4.effective), []);
+});
+
+test("用歷史門檻算狀態：thresholdSource 標示來源；越過歷史 P97.5 才是危險", () => {
+  const { effective } = resolveThresholds({ datasetIds: catalog.datasets.map((d) => d.id), table: thrTable, pct: DEFAULT_PCT, admin: {} });
+  const s = computeDomainStatus(input("sheep_barn", { overrides: effective }));
+  assert.equal(s.thresholdSource, "history");
+  assert.ok(s.thresholdNote.includes("P90"));
+  assert.equal(s.policy!.caution, effective.sheep_barn.caution);
+  const a = computeDomainStatus(input("sheep_barn", { overrides: { sheep_barn: { caution: 70, alarm: 75, source: "admin", note: "管理員調整" } } }));
+  assert.equal(a.thresholdSource, "admin");
+  const none = computeDomainStatus(input("sheep_barn"));
+  assert.equal(none.thresholdSource, "assumed");
+});
