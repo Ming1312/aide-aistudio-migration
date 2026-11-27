@@ -98,10 +98,11 @@ function getOrCreateSessionId(req: Request, res: Response): string {
     return existing;
   }
   const sid = randomUUID();
-  res.setHeader(
-    "Set-Cookie",
-    `aide_sid=${encodeURIComponent(sid)}; HttpOnly; SameSite=Lax; Path=/`
-  );
+  // AI Studio 把 App 放在跨站 iframe 裡（aistudio.google.com 內嵌 *.run.app）：SameSite=Lax 的 cookie 在那裡不會被保存，
+  // 登入後角色永遠是訪客。HTTPS 時改用 SameSite=None; Secure; Partitioned（依上層網站分區，別的網站拿不到這個 cookie）；
+  // 本機 http 維持 Lax。寫入端點只收 JSON（跨站請求需要 CORS 預檢，伺服器不放行）。
+  const attrs = req.secure ? "HttpOnly; Secure; SameSite=None; Partitioned; Path=/" : "HttpOnly; SameSite=Lax; Path=/";
+  res.setHeader("Set-Cookie", `aide_sid=${encodeURIComponent(sid)}; ${attrs}`);
   return sid;
 }
 

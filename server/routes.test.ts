@@ -1380,3 +1380,15 @@ test("三個角色：訪客／員工看不到管理狀態；員工不能寫引�
     assert.equal(good.status, 200);
   });
 });
+
+test("session cookie：本機 http 用 SameSite=Lax；HTTPS（經代理）改用 SameSite=None; Secure; Partitioned，AI Studio 的跨站 iframe 才留得住登入", async () => {
+  await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
+    const http1 = await fetch(`${base}/api/admin/role`);
+    const c1 = http1.headers.get("set-cookie") || "";
+    assert.ok(c1.includes("aide_sid=") && c1.includes("SameSite=Lax") && !c1.includes("Secure"));
+
+    const https1 = await fetch(`${base}/api/admin/role`, { headers: { "X-Forwarded-Proto": "https" } });
+    const c2 = https1.headers.get("set-cookie") || "";
+    assert.ok(c2.includes("aide_sid=") && c2.includes("SameSite=None") && c2.includes("Secure") && c2.includes("Partitioned") && c2.includes("HttpOnly"));
+  });
+});
