@@ -1392,3 +1392,25 @@ test("session cookie：本機 http 用 SameSite=Lax；HTTPS（經代理）改用
     assert.ok(c2.includes("aide_sid=") && c2.includes("SameSite=None") && c2.includes("Secure") && c2.includes("Partitioned") && c2.includes("HttpOnly"));
   });
 });
+
+test("X-Aide-Session 標頭：cookie 被擋的環境（手機、跨站 iframe）也能保住登入；標頭代號格式不對就當沒有", async () => {
+  await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
+    const r0 = (await (await fetch(`${base}/api/admin/role`)).json()) as { session: string; role: string };
+    assert.match(r0.session, /^[a-zA-Z0-9-]{8,64}$/);
+    // 之後完全不帶 cookie，只帶標頭
+    const H = { "Content-Type": "application/json", "X-Aide-Session": r0.session };
+    const login = await fetch(`${base}/api/admin/login`, { method: "POST", headers: H, body: JSON.stringify({ account: "staff", passphrase: "aide-staff" }) });
+    assert.equal(login.status, 200);
+    assert.equal(login.headers.get("set-cookie"), null, "有標頭就不另外設 cookie");
+    const role = (await (await fetch(`${base}/api/admin/role`, { headers: { "X-Aide-Session": r0.session } })).json()) as { role: string };
+    assert.equal(role.role, "staff");
+    // 沒帶標頭（也沒 cookie）＝另一個連線，仍是訪客；格式不對的標頭被忽略
+    assert.equal(((await (await fetch(`${base}/api/admin/role`)).json()) as { role: string }).role, "viewer");
+    const bad = (await (await fetch(`${base}/api/admin/role`, { headers: { "X-Aide-Session": "bad id!" } })).json()) as { role: string; session: string };
+    assert.equal(bad.role, "viewer");
+    assert.notEqual(bad.session, "bad id!");
+    // 員工標頭可以用匯入代理（被白名單擋下 400，而不是 403）
+    const imp = await fetch(`${base}/api/import/fetch?url=${encodeURIComponent("https://evil.example.com/x")}`, { headers: { "X-Aide-Session": r0.session } });
+    assert.equal(imp.status, 400);
+  });
+});

@@ -2,6 +2,7 @@
 import type { RealDataset } from "../../contracts/types";
 import { extractSheetId, sheetCsvUrl, type SheetTab } from "../../contracts/sheetTabs";
 import { fetchCsvText } from "./importSources";
+import { sessionHeaders } from "./session";
 import { parseImportedText } from "./liveSeries";
 
 export interface TabPlan {
@@ -35,7 +36,7 @@ export function guessDataset(tabName: string, text: string, datasets: RealDatase
 export async function listSheetTabs(url: string): Promise<{ id: string; tabs: SheetTab[] }> {
   let res: Response;
   try {
-    res = await fetch(`/api/import/sheet-tabs?url=${encodeURIComponent(url)}`);
+    res = await fetch(`/api/import/sheet-tabs?url=${encodeURIComponent(url)}`, { headers: sessionHeaders() });
   } catch {
     throw new Error("連不上資料伺服器（網頁伺服器可能已關閉）");
   }

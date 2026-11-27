@@ -1,4 +1,6 @@
 // 匯入來源：Google 試算表網址正規化、取檔（先直連、被 CORS 擋下時走伺服器代理）。
+import { sessionHeaders } from "./session";
+
 export type SourceKind = "sheet" | "url";
 
 /** 把 Google 試算表的分享／編輯網址轉成 CSV 匯出網址；已是匯出或發布網址則原樣回傳。 */
@@ -43,7 +45,7 @@ export async function fetchCsvText(url: string): Promise<{ text: string; via: "d
   }
   let res: Response;
   try {
-    res = await fetch(`/api/import/fetch?url=${encodeURIComponent(url)}`);
+    res = await fetch(`/api/import/fetch?url=${encodeURIComponent(url)}`, { headers: sessionHeaders() });
   } catch {
     throw new Error("無法連線：請確認網路，或改用上傳檔案");
   }

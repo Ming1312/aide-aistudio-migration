@@ -92,6 +92,9 @@ function parseCookies(header: string | undefined): Record<string, string> {
 }
 
 function getOrCreateSessionId(req: Request, res: Response): string {
+  // 標頭優先：cookie 被擋的環境（手機、內建瀏覽器、跨站 iframe）靠 X-Aide-Session 保住登入。代號只在登入成功後才會對應到角色。
+  const hdr = req.headers["x-aide-session"];
+  if (typeof hdr === "string" && /^[a-zA-Z0-9-]{8,64}$/.test(hdr)) return hdr;
   const cookies = parseCookies(req.headers.cookie);
   const existing = cookies.aide_sid;
   if (existing && /^[a-zA-Z0-9-]{8,64}$/.test(existing)) {
@@ -561,6 +564,7 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
     const sid = getOrCreateSessionId(req, res);
     const demo = adminGate.demoAvailable();
     res.json({
+      session: sid,
       configured: adminGate.configured(),
       role: adminGate.role(sid),
       demo_available: demo,

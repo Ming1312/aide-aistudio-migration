@@ -1,5 +1,6 @@
 import type { AdminRole } from "../types/app";
 import type { ThresholdTable } from "./thresholds";
+import { rememberSession, sessionHeaders } from "./session";
 import type {
   AnomaliesResponse,
   DecisionExplainResponse,
@@ -154,9 +155,12 @@ export async function fetchOverviewStatus(
 }
 
 export async function fetchAdminRole(): Promise<AdminRoleStatus> {
-  const res = await fetch("/api/admin/role");
+  const res = await fetch("/api/admin/role", { headers: sessionHeaders() });
   if (!res.ok) throw new Error(`無法讀取角色（HTTP ${res.status}）`);
-  return (await res.json()) as AdminRoleStatus;
+  const data = (await res.json()) as AdminRoleStatus & { session?: string };
+  rememberSession(data.session);
+  const { session: _s, ...role } = data;
+  return role as AdminRoleStatus;
 }
 
 export interface AdminLoginResponse {
@@ -174,20 +178,20 @@ export async function loginAdmin(
 ): Promise<AdminLoginResponse> {
   const res = await fetch("/api/admin/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...sessionHeaders() },
     body: JSON.stringify(account ? { account, passphrase } : { passphrase }),
   });
   return (await res.json()) as AdminLoginResponse;
 }
 
 export async function fetchAdminStatus(): Promise<AdminStatusInfo> {
-  const res = await fetch("/api/admin/status");
+  const res = await fetch("/api/admin/status", { headers: sessionHeaders() });
   if (!res.ok) throw new Error(`無法讀取管理狀態（HTTP ${res.status}）`);
   return (await res.json()) as AdminStatusInfo;
 }
 
 export async function logoutAdmin(): Promise<void> {
-  await fetch("/api/admin/logout", { method: "POST" });
+  await fetch("/api/admin/logout", { method: "POST", headers: sessionHeaders() });
 }
 
 export async function fetchDatasetAnomalies(
