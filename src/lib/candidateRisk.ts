@@ -3,6 +3,7 @@ import type {
   ModelKey,
   PrecomputedForecastTask,
   PrecomputedForecasts,
+  RealDataset,
 } from "../../contracts/types";
 
 /**
@@ -193,6 +194,45 @@ export const CANDIDATE_POLICIES: Record<string, CandidatePolicy> = {
 
 /** 沒有候選風險決策的場域（目前七個場域都有；保留給之後新增、沒有政策的場域） */
 export const NO_RISK_REASONS: Record<string, string> = {};
+
+/** 沒有專屬處置說明的感測器用的通用行動（只有檢查／確認／通知） */
+const GENERIC_ACTIONS: CandidatePolicy["actions"] = {
+  caution: ["確認該感測器的讀值與現場狀況（系統不控制設備）", "持續觀察走勢"],
+  alarm: ["通知現場人員確認該項讀值是否異常", "記錄當下讀值、時間與現場狀況"],
+  dataSuspect: ["先處理資料：檢查該感測器是否卡值、漂移或斷線"],
+};
+
+/**
+ * 某個場域的某個感測器的風險政策：政策感測器沿用專屬說明與處置，其餘感測器用通用說明；
+ * 門檻與方向來自（管理員調整 ＞ 歷史計算）。沒有門檻的非政策感測器回 null。
+ */
+export function policyForSensor(
+  dataset: Pick<RealDataset, "id" | "columns">,
+  sensor: string,
+  thr: { caution: number; alarm: number; direction: RiskDirection; degenerate?: boolean } | undefined
+): CandidatePolicy | null {
+  const base = CANDIDATE_POLICIES[dataset.id];
+  if (base && base.sensor === sensor) {
+    return thr ? applyOverride({ ...base, direction: thr.direction }, thr.caution, thr.alarm) : base;
+  }
+  if (!thr || thr.degenerate) return null;
+  const col = dataset.columns.find((c) => c.key === sensor);
+  if (!col) return null;
+  return applyOverride(
+    {
+      datasetId: dataset.id,
+      sensor,
+      unit: col.unit,
+      direction: thr.direction,
+      caution: thr.caution,
+      alarm: thr.alarm,
+      basis: "門檻由該感測器的歷史資料百分位算出（見設定）；沒有專屬的處置說明。",
+      actions: GENERIC_ACTIONS,
+    },
+    thr.caution,
+    thr.alarm
+  );
+}
 
 export function classify(value: number, policy: CandidatePolicy): RiskLevel {
   if (!Number.isFinite(value)) return "normal";

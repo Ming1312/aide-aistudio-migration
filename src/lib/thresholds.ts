@@ -19,6 +19,9 @@ export const PCT_MAX = 0.99;
 export interface ThresholdRange {
   caution: number;
   alarm: number;
+  direction: RiskDirection;
+  /** 注意線＝警戒線（讀值幾乎不變，例如多半是 0）：這組門檻沒有意義，非代表感測器不納入監看 */
+  degenerate?: boolean;
   source: "history" | "admin";
   /** 說明（來源、百分位、樣本數）；顯示用 */
   note: string;
@@ -58,7 +61,9 @@ export function computeFromValues(
   const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
   if (v.length < MIN_VALUES || !validPct(pct)) return null;
   const [pc, pa] = tailProbs(direction, pct);
-  return { caution: round1(quantile(v, pc)), alarm: round1(quantile(v, pa)), source: "history", note: noteFor(pct, v.length, range.from, range.to) };
+  const caution = round1(quantile(v, pc));
+  const alarm = round1(quantile(v, pa));
+  return { caution, alarm, direction, degenerate: caution === alarm, source: "history", note: noteFor(pct, v.length, range.from, range.to) };
 }
 
 /** 從「感測器的有效數值（略過斷電／歸零時段）」取值：離線產生表與匯入後重算共用 */
@@ -84,23 +89,40 @@ export function validValues(rows: ParsedCsvRow[], sensor: string, events: Anomal
   return { values, from, to, excluded };
 }
 
+// ---- 每個感測器一組門檻
+
+export const sensorKey = (datasetId: string, sensor: string) => `${datasetId}::${sensor}`;
+
+/** 哪些欄位算「可設門檻的感測器」：連續量與衍生指數；排除累計計數器、狀態碼、校正參數、角度 */
+export function isThresholdSensor(col: { measurement_kind: string; is_cumulative_counter: boolean; n_observed: number }): boolean {
+  return (col.measurement_kind === "continuous" || col.measurement_kind === "derived_index") && !col.is_cumulative_counter && col.n_observed >= MIN_VALUES;
+}
+
+/** 預設方向：溶氧、電量、電壓、訊號、飽和度「越低越危險」，其餘「越高越危險」（管理員可改） */
+export function defaultDirection(sensor: string, unit: string): RiskDirection {
+  if (/電量|電壓|訊號|CSQ|飽和|溶氧/.test(sensor)) return "below";
+  if (/^DO/.test(sensor) && !/水溫/.test(sensor) && /mg\/L/.test(unit)) return "below";
+  return "above";
+}
+
 // ---- 預先算好的表（public/data/real_public/precomputed/thresholds.json）
 
 export interface ThresholdTableEntry {
   sensor: string;
+  /** 預設方向（產生表時用；實際用的方向可被管理員改） */
   direction: RiskDirection;
   n: number;
   excluded: number;
   from: string;
   to: string;
-  /** 分位數格點：機率（字串）→ 數值 */
+  /** 分位數格點：機率（字串）→ 數值（以「值」本身排序，與方向無關） */
   grid: Record<string, number>;
 }
 export interface ThresholdTable {
   generated_at: string;
   grid: number[];
   note: string;
-  datasets: Record<string, ThresholdTableEntry>;
+  datasets: Record<string, { sensors: Record<string, ThresholdTableEntry> }>;
 }
 
 export function buildEntry(sensor: string, direction: RiskDirection, v: { values: number[]; from: string; to: string; excluded: number }): ThresholdTableEntry {
@@ -124,38 +146,52 @@ export function quantileFromGrid(entry: ThresholdTableEntry, p: number): number 
   return pts[pts.length - 1][1];
 }
 
-export function fromEntry(entry: ThresholdTableEntry, pct: Pct = DEFAULT_PCT): ThresholdRange | null {
+export function fromEntry(entry: ThresholdTableEntry, pct: Pct = DEFAULT_PCT, direction: RiskDirection = entry.direction): ThresholdRange | null {
   if (entry.n < MIN_VALUES || !validPct(pct)) return null;
-  const [pc, pa] = tailProbs(entry.direction, pct);
+  const [pc, pa] = tailProbs(direction, pct);
+  const caution = round1(quantileFromGrid(entry, pc));
+  const alarm = round1(quantileFromGrid(entry, pa));
   return {
-    caution: round1(quantileFromGrid(entry, pc)),
-    alarm: round1(quantileFromGrid(entry, pa)),
+    caution,
+    alarm,
+    direction,
+    degenerate: caution === alarm,
     source: "history",
     note: noteFor(pct, entry.n, entry.from, entry.to),
   };
 }
 
+/** key＝`${datasetId}::${sensor}` */
 export type ThresholdMap = Record<string, ThresholdRange>;
 
-/** 優先順序：管理員調整 ＞ 歷史計算（匯入後以合併資料精確重算，否則用預先算好的表）＞（沒有 → 呼叫端退回假定值） */
+/**
+ * 優先順序：管理員調整 ＞ 歷史計算（匯入後以合併資料精確重算，否則用預先算好的表）＞（沒有 → 呼叫端退回假定值）。
+ * dirs：管理員改過方向的感測器（key → 方向）；歷史門檻依「實際方向」計算。
+ */
 export function resolveThresholds(args: {
-  datasetIds: string[];
   table: ThresholdTable | null;
   pct: Pct;
   admin: Record<string, { caution: number; alarm: number }>;
-  /** 匯入後可用精確重算的資料：datasetId → 有效數值 */
+  dirs?: Record<string, RiskDirection>;
+  /** 匯入後可用精確重算的資料：key → 有效數值 */
   exact?: Record<string, { values: number[]; from: string; to: string; direction: RiskDirection }>;
 }): { effective: ThresholdMap; history: ThresholdMap } {
   const history: ThresholdMap = {};
   const effective: ThresholdMap = {};
-  for (const id of args.datasetIds) {
-    const ex = args.exact?.[id];
-    let h: ThresholdRange | null = ex ? computeFromValues(ex.values, ex.direction, args.pct, { from: ex.from, to: ex.to }) : null;
-    if (!h && args.table?.datasets[id]) h = fromEntry(args.table.datasets[id], args.pct);
-    if (h) history[id] = h;
-    const a = args.admin[id];
-    if (a) effective[id] = { caution: a.caution, alarm: a.alarm, source: "admin", note: "管理員調整" };
-    else if (h) effective[id] = h;
+  const keys = new Set<string>();
+  if (args.table) for (const [id, d] of Object.entries(args.table.datasets)) for (const sensor of Object.keys(d.sensors)) keys.add(sensorKey(id, sensor));
+  for (const k of Object.keys(args.admin)) keys.add(k);
+  for (const k of keys) {
+    const [id, sensor] = k.split("::");
+    const entry = args.table?.datasets[id]?.sensors[sensor];
+    const dir = args.dirs?.[k] ?? entry?.direction ?? args.exact?.[k]?.direction ?? "above";
+    const ex = args.exact?.[k];
+    let h: ThresholdRange | null = ex ? computeFromValues(ex.values, dir, args.pct, { from: ex.from, to: ex.to }) : null;
+    if (!h && entry) h = fromEntry(entry, args.pct, dir);
+    if (h) history[k] = h;
+    const a = args.admin[k];
+    if (a) effective[k] = { caution: a.caution, alarm: a.alarm, direction: dir, source: "admin", note: "管理員調整" };
+    else if (h) effective[k] = h;
   }
   return { effective, history };
 }

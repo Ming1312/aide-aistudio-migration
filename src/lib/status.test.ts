@@ -146,17 +146,19 @@ test("引擎即時：資料過時或有旗標 → 先確認資料；匯入資料
   assert.equal(computeDomainStatus(input("sheep_barn", { engine: noTask })).source, "precomputed");
 });
 
-// ---- 歷史百分位門檻
-import { DEFAULT_PCT, GRID, buildEntry, computeFromValues, fromEntry, quantile, quantileFromGrid, resolveThresholds, validValues, validPct, type ThresholdTable } from "./thresholds.ts";
+// ---- 歷史百分位門檻（每個感測器各一組）
+import { CANDIDATE_POLICIES } from "./candidateRisk.ts";
+import { DEFAULT_PCT, GRID, buildEntry, computeFromValues, defaultDirection, fromEntry, isThresholdSensor, quantile, quantileFromGrid, resolveThresholds, sensorKey, validPct, validValues, type ThresholdTable } from "./thresholds.ts";
 
 const thrTable = JSON.parse(readFileSync("public/data/real_public/precomputed/thresholds.json", "utf-8")) as ThresholdTable;
+const KEY = (id: string) => sensorKey(id, CANDIDATE_POLICIES[id].sensor);
 
 test("quantile／computeFromValues：已知答案；越低越危險取對稱下尾；樣本不足或百分位不合法回 null", () => {
   const v = Array.from({ length: 101 }, (_, i) => i); // 0..100
   assert.equal(quantile(v, 0.9), 90);
   assert.equal(quantile(v, 0.975), 97.5);
   const up = computeFromValues(v, "above")!;
-  assert.deepEqual([up.caution, up.alarm], [90, 97.5]);
+  assert.deepEqual([up.caution, up.alarm, up.direction], [90, 97.5, "above"]);
   const down = computeFromValues(v, "below")!;
   assert.deepEqual([down.caution, down.alarm], [10, 2.5]);
   assert.equal(computeFromValues(v.slice(0, 20), "above"), null);
@@ -165,55 +167,96 @@ test("quantile／computeFromValues：已知答案；越低越危險取對稱下�
   assert.equal(validPct(DEFAULT_PCT), true);
 });
 
-test("thresholds.json 沒有過期：與 CSV 重算的結果一致；方向正確（above：警戒≥注意；below：警戒≤注意）", () => {
-  const events = (id: string) => anomalies.datasets[id]?.events ?? [];
+test("每個場域有多個感測器的門檻，只含連續量與衍生指數；政策感測器在其中", () => {
+  let total = 0;
   for (const ds of catalog.datasets) {
-    const e = thrTable.datasets[ds.id];
-    assert.ok(e, ds.id);
-    const rows = parseCsvText(readFileSync(`public/data/real_public/${ds.id}.csv`, "utf-8"), "__real").rows;
-    const fresh = buildEntry(e.sensor, e.direction, validValues(rows, e.sensor, events(ds.id)));
-    assert.equal(fresh.n, e.n, ds.id);
-    for (const g of GRID) assert.ok(Math.abs(fresh.grid[String(g)] - e.grid[String(g)]) < 1e-6, `${ds.id} P${g}`);
-    const t = fromEntry(e)!;
-    assert.ok(t, ds.id);
-    if (e.direction === "above") assert.ok(t.alarm >= t.caution, ds.id);
-    else assert.ok(t.alarm <= t.caution, ds.id);
+    const sensors = thrTable.datasets[ds.id].sensors;
+    const keys = Object.keys(sensors);
+    total += keys.length;
+    assert.ok(keys.length >= 5, `${ds.id} 只有 ${keys.length} 個`);
+    assert.ok(keys.includes(CANDIDATE_POLICIES[ds.id].sensor), ds.id);
+    for (const k of keys) {
+      const col = ds.columns.find((c) => c.key === k)!;
+      assert.ok(isThresholdSensor(col), `${ds.id}/${k}`);
+      assert.ok(!col.is_cumulative_counter && col.measurement_kind !== "state_code");
+    }
   }
-  assert.ok(thrTable.datasets["rearing_plant_1_north"].excluded > 0, "北側的斷電歸零時段被略過");
+  assert.ok(total >= 60, `共 ${total}`);
+  assert.equal(defaultDirection("DO1 即時值", "mg/L"), "below");
+  assert.equal(defaultDirection("DO1水溫", "°C"), "above");
+  assert.equal(defaultDirection("電池電量", "%"), "below");
+  assert.equal(defaultDirection("PM2.5", "µg/m³"), "above");
 });
 
-test("格點內插與精確計算相近（P92.5 落在 P90 與 P95 之間）", () => {
-  const e = thrTable.datasets["sheep_barn"];
+test("thresholds.json 沒有過期：與 CSV 重算一致；方向正確（above：警戒≥注意；below：警戒≤注意）", () => {
+  for (const ds of catalog.datasets) {
+    const events = anomalies.datasets[ds.id]?.events ?? [];
+    const rows = parseCsvText(readFileSync(`public/data/real_public/${ds.id}.csv`, "utf-8"), "__real").rows;
+    for (const [sensor, e] of Object.entries(thrTable.datasets[ds.id].sensors)) {
+      const fresh = buildEntry(sensor, e.direction, validValues(rows, sensor, events));
+      assert.equal(fresh.n, e.n, `${ds.id}/${sensor}`);
+      for (const g of GRID) assert.ok(Math.abs(fresh.grid[String(g)] - e.grid[String(g)]) < 1e-6, `${ds.id}/${sensor} P${g}`);
+      const t = fromEntry(e)!;
+      assert.ok(t, `${ds.id}/${sensor}`);
+      if (e.direction === "above") assert.ok(t.alarm >= t.caution, `${ds.id}/${sensor}`);
+      else assert.ok(t.alarm <= t.caution, `${ds.id}/${sensor}`);
+    }
+  }
+  assert.ok(thrTable.datasets["rearing_plant_1_north"].sensors["溫度"].excluded > 0, "北側的斷電歸零時段被略過");
+});
+
+test("格點內插與方向覆寫：P92.5 落在 P90 與 P95 之間；改成 below 取下尾", () => {
+  const e = thrTable.datasets["sheep_barn"].sensors["成羊區THI"];
   const mid = quantileFromGrid(e, 0.925);
   assert.ok(mid >= e.grid["0.9"] && mid <= e.grid["0.95"]);
   assert.equal(quantileFromGrid(e, 0.999), e.grid["0.99"]);
+  const up = fromEntry(e, DEFAULT_PCT, "above")!;
+  const dn = fromEntry(e, DEFAULT_PCT, "below")!;
+  assert.ok(dn.caution < up.caution && dn.direction === "below");
 });
 
-test("門檻優先順序：管理員調整 ＞ 歷史計算；匯入後以合併資料精確重算；沒有歷史表時不產生歷史門檻", () => {
-  const ids = ["sheep_barn", "expert_system_c22"];
-  const r1 = resolveThresholds({ datasetIds: ids, table: thrTable, pct: DEFAULT_PCT, admin: {} });
-  assert.equal(r1.effective.sheep_barn.source, "history");
-  assert.equal(r1.effective.sheep_barn.caution, r1.history.sheep_barn.caution);
-  const r2 = resolveThresholds({ datasetIds: ids, table: thrTable, pct: DEFAULT_PCT, admin: { sheep_barn: { caution: 90, alarm: 95 } } });
-  assert.equal(r2.effective.sheep_barn.source, "admin");
-  assert.equal(r2.effective.sheep_barn.caution, 90);
-  assert.equal(r2.history.sheep_barn.source, "history"); // 純歷史值仍可顯示
-  assert.equal(r2.effective.expert_system_c22.source, "history");
+test("門檻優先順序：管理員調整 ＞ 歷史計算；方向可改；匯入後精確重算；沒有表時不產生歷史門檻", () => {
+  const k = KEY("sheep_barn");
+  const k2 = KEY("expert_system_c22");
+  const r1 = resolveThresholds({ table: thrTable, pct: DEFAULT_PCT, admin: {} });
+  assert.equal(r1.effective[k].source, "history");
+  assert.equal(r1.effective[k].caution, r1.history[k].caution);
+  assert.ok(Object.keys(r1.effective).length >= 60);
+  const r2 = resolveThresholds({ table: thrTable, pct: DEFAULT_PCT, admin: { [k]: { caution: 90, alarm: 95 } } });
+  assert.equal(r2.effective[k].source, "admin");
+  assert.equal(r2.effective[k].caution, 90);
+  assert.equal(r2.history[k].source, "history");
+  assert.equal(r2.effective[k2].source, "history");
+  const r3 = resolveThresholds({ table: thrTable, pct: DEFAULT_PCT, admin: {}, dirs: { [k]: "below" } });
+  assert.equal(r3.effective[k].direction, "below");
+  assert.ok(r3.effective[k].caution < r1.effective[k].caution);
   const vals = Array.from({ length: 100 }, (_, i) => i);
-  const r3 = resolveThresholds({ datasetIds: ["sheep_barn"], table: thrTable, pct: DEFAULT_PCT, admin: {}, exact: { sheep_barn: { values: vals, from: "a", to: "b", direction: "above" } } });
-  assert.equal(r3.effective.sheep_barn.caution, 89.1);
-  const r4 = resolveThresholds({ datasetIds: ids, table: null, pct: DEFAULT_PCT, admin: {} });
-  assert.deepEqual(Object.keys(r4.effective), []);
+  const r4 = resolveThresholds({ table: thrTable, pct: DEFAULT_PCT, admin: {}, exact: { [k]: { values: vals, from: "a", to: "b", direction: "above" } } });
+  assert.equal(r4.effective[k].caution, 89.1);
+  assert.deepEqual(Object.keys(resolveThresholds({ table: null, pct: DEFAULT_PCT, admin: {} }).effective), []);
 });
 
-test("用歷史門檻算狀態：thresholdSource 標示來源；越過歷史 P97.5 才是危險", () => {
-  const { effective } = resolveThresholds({ datasetIds: catalog.datasets.map((d) => d.id), table: thrTable, pct: DEFAULT_PCT, admin: {} });
+test("多感測器狀態：每個有預測的感測器各自判斷，場域取最嚴重者；非代表感測器的「先確認資料」不拉高場域", () => {
+  const { effective } = resolveThresholds({ table: thrTable, pct: DEFAULT_PCT, admin: {} });
   const s = computeDomainStatus(input("sheep_barn", { overrides: effective }));
   assert.equal(s.thresholdSource, "history");
   assert.ok(s.thresholdNote.includes("P90"));
-  assert.equal(s.policy!.caution, effective.sheep_barn.caution);
-  const a = computeDomainStatus(input("sheep_barn", { overrides: { sheep_barn: { caution: 70, alarm: 75, source: "admin", note: "管理員調整" } } }));
-  assert.equal(a.thresholdSource, "admin");
+  assert.ok(s.sensorStatuses.length >= 3, `監看 ${s.sensorStatuses.length}`);
+  assert.ok(!s.sensorStatuses.some((x) => x.sensor === "ID4-CH4"), "讀值幾乎不變（注意線＝警戒線）的感測器不納入監看");
+  assert.ok(s.sensorStatuses.some((x) => x.isPolicySensor && x.sensor === "成羊區THI"));
+  assert.ok(s.sensorStatuses.every((x) => x.horizons.length > 0 && x.policy));
+  // 把「非代表」感測器的門檻壓到極低 → 該感測器危險，場域跟著危險，主要感測器換成它
+  const other = s.sensorStatuses.find((x) => !x.isPolicySensor)!;
+  const squeezed = computeDomainStatus(input("sheep_barn", { overrides: { ...effective, [sensorKey("sheep_barn", other.sensor!)]: { caution: -1e6, alarm: -1e5, direction: "above", source: "admin", note: "管理員調整" } } }));
+  assert.equal(squeezed.level, "danger");
+  assert.equal(squeezed.sensor, other.sensor);
+  // 管理員調整的來源標示
+  const a = computeDomainStatus(input("sheep_barn", { overrides: { [KEY("sheep_barn")]: { caution: 70, alarm: 75, direction: "above", source: "admin", note: "管理員調整" } } }));
+  const pol = a.sensorStatuses.find((x) => x.isPolicySensor)!;
+  assert.equal(pol.thresholdSource, "admin");
+  assert.equal(pol.level, "danger");
+  // 沒有歷史門檻時，代表感測器退回假定值
   const none = computeDomainStatus(input("sheep_barn"));
   assert.equal(none.thresholdSource, "assumed");
+  assert.equal(none.sensorStatuses.length, 1);
 });

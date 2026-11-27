@@ -14,7 +14,8 @@ import {
 } from "./lib/dataLoader";
 import { mergeRows } from "./lib/liveSeries";
 import { CANDIDATE_POLICIES, findTask } from "./lib/candidateRisk";
-import { DEFAULT_PCT, resolveThresholds, validPct, validValues, type Pct, type ThresholdTable } from "./lib/thresholds";
+import type { RiskDirection } from "./lib/candidateRisk";
+import { DEFAULT_PCT, resolveThresholds, sensorKey, validPct, validValues, type Pct, type ThresholdTable } from "./lib/thresholds";
 import { loadJson, saveJson } from "./lib/storage";
 import { computeDomainStatus, maskOutageRows, type StatusInput, type ThresholdOverrides } from "./lib/status";
 import { useEngine } from "./lib/useEngine";
@@ -30,6 +31,17 @@ const VALID_PAGES = new Set<PageId>(["overview", "data", "decision", "import", "
 const OVERRIDES_KEY = "aide.thresholds.v1";
 const DEFAULT_DS_KEY = "aide.defaultDataset.v1";
 const PCT_KEY = "aide.thresholdPct.v1";
+const DIRS_KEY = "aide.thresholdDirs.v1";
+
+/** 舊版的管理員調整以場域代號為鍵（只有政策感測器）；轉成「場域::感測器」 */
+function migrateOverrides(raw: ThresholdOverrides): ThresholdOverrides {
+  const out: ThresholdOverrides = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (k.includes("::")) out[k] = v;
+    else if (CANDIDATE_POLICIES[k]) out[sensorKey(k, CANDIDATE_POLICIES[k].sensor)] = v;
+  }
+  return out;
+}
 
 function readInitialRoute(): { page: PageId; dataset: string | null } {
   const params = new URLSearchParams(window.location.search);
@@ -51,7 +63,8 @@ export const App: React.FC = () => {
   const initialRoute = useMemo(() => readInitialRoute(), []);
   const [datasetId, setDatasetId] = useState<string>(initialRoute.dataset || loadJson<string>(DEFAULT_DS_KEY, "sheep_barn"));
   const [activePage, setActivePage] = useState<PageId>(initialRoute.page);
-  const [overrides, setOverrides] = useState<ThresholdOverrides>(() => loadJson<ThresholdOverrides>(OVERRIDES_KEY, {}));
+  const [overrides, setOverrides] = useState<ThresholdOverrides>(() => migrateOverrides(loadJson<ThresholdOverrides>(OVERRIDES_KEY, {})));
+  const [dirs, setDirs] = useState<Record<string, RiskDirection>>(() => loadJson<Record<string, RiskDirection>>(DIRS_KEY, {}));
   const [thresholdTable, setThresholdTable] = useState<ThresholdTable | null>(null);
   const [pct, setPct] = useState<Pct>(() => {
     const p = loadJson<Pct>(PCT_KEY, DEFAULT_PCT);
@@ -122,17 +135,21 @@ export const App: React.FC = () => {
 
   // 風險門檻：管理員調整 ＞ 歷史百分位計算（匯入資料後以合併資料精確重算）＞ 程式內的假定值
   const thresholds = useMemo(() => {
-    const exact: Record<string, { values: number[]; from: string; to: string; direction: "above" | "below" }> = {};
+    const exact: Record<string, { values: number[]; from: string; to: string; direction: RiskDirection }> = {};
     for (const ds of datasets) {
-      const p = CANDIDATE_POLICIES[ds.id];
       const imp = importer.imported[ds.id];
       const base = baseRows[ds.id];
-      if (!p || !imp || imp.length === 0 || !base) continue;
-      const v = validValues(mergeRows(base, imp), p.sensor, anomaliesMap[ds.id]?.events ?? []);
-      exact[ds.id] = { values: v.values, from: v.from, to: v.to, direction: p.direction };
+      const sensors = thresholdTable?.datasets[ds.id]?.sensors;
+      if (!sensors || !imp || imp.length === 0 || !base) continue;
+      const merged = mergeRows(base, imp);
+      const events = anomaliesMap[ds.id]?.events ?? [];
+      for (const [sensor, entry] of Object.entries(sensors)) {
+        const v = validValues(merged, sensor, events);
+        exact[sensorKey(ds.id, sensor)] = { values: v.values, from: v.from, to: v.to, direction: dirs[sensorKey(ds.id, sensor)] ?? entry.direction };
+      }
     }
-    return resolveThresholds({ datasetIds: datasets.map((d) => d.id), table: thresholdTable, pct, admin: overrides, exact });
-  }, [datasets, thresholdTable, pct, overrides, importer.imported, baseRows, anomaliesMap]);
+    return resolveThresholds({ table: thresholdTable, pct, admin: overrides, dirs, exact });
+  }, [datasets, thresholdTable, pct, overrides, dirs, importer.imported, baseRows, anomaliesMap]);
 
   const inputs = useMemo(() => {
     const m = new Map<string, StatusInput>();
@@ -177,6 +194,10 @@ export const App: React.FC = () => {
     setOverrides(next);
     saveJson(OVERRIDES_KEY, next);
   }, []);
+  const changeDirs = useCallback((next: Record<string, RiskDirection>) => {
+    setDirs(next);
+    saveJson(DIRS_KEY, next);
+  }, []);
   const changePct = useCallback((next: Pct) => {
     setPct(next);
     saveJson(PCT_KEY, next);
@@ -213,7 +234,7 @@ export const App: React.FC = () => {
             onOpenData={openData}
           />;
       case "data":
-        return <DataPage dataset={activeDataset} forecasts={forecasts} importedRows={importer.imported[activeDataset.id] ?? []} />;
+        return <DataPage dataset={activeDataset} forecasts={forecasts} importedRows={importer.imported[activeDataset.id] ?? []} thresholds={thresholds.effective} />;
       case "decision":
         return <DecisionPage
             status={activeStatus}
@@ -239,6 +260,10 @@ export const App: React.FC = () => {
             historyThresholds={thresholds.history}
             pct={pct}
             onChangePct={changePct}
+            dirs={dirs}
+            onChangeDirs={changeDirs}
+            thresholdTable={thresholdTable}
+            monitored={Object.fromEntries(statuses.map((st) => [st.datasetId, st.sensorStatuses.map((x) => x.sensor ?? "")]))}
             engine={can(adminRole.role, "view_engine") ? engine : null}
           />
         );

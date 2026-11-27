@@ -117,7 +117,7 @@ export const OverviewPage: React.FC<Props> = ({ statuses, engine, onOpenDecision
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-900 truncate">{s.name.split("（")[0]}</div>
                   <div className="text-[11px] text-slate-500 truncate">
-                    {s.hasModel ? `${s.policy?.sensor} · ${s.source === "import" ? "匯入資料" : s.source === "baseline" ? "簡易預測・資料不完整" : s.source === "engine" ? (s.synthetic ? "引擎・模擬流" : "引擎即時") : "預計算"}` : s.noModelReason}
+                    {s.hasModel ? `${s.policy?.sensor}${s.sensorStatuses.filter((x) => x.sensor !== s.sensor && (x.level === "caution" || x.level === "danger")).length > 0 ? `（另 ${s.sensorStatuses.filter((x) => x.sensor !== s.sensor && (x.level === "caution" || x.level === "danger")).length} 項異常）` : ""} · ${s.source === "import" ? "匯入資料" : s.source === "baseline" ? "簡易預測・資料不完整" : s.source === "engine" ? (s.synthetic ? "引擎・模擬流" : "引擎即時") : "預計算"}` : s.noModelReason}
                   </div>
                 </div>
                 <SafetyBadge level={s.level} />

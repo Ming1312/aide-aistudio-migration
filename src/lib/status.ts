@@ -14,12 +14,14 @@ import type { ParsedCsvRow } from "../types/app";
 import {
   CANDIDATE_POLICIES,
   NO_RISK_REASONS,
-  applyOverride,
   classify,
   findTask,
+  policyForSensor,
   type CandidatePolicy,
+  type RiskDirection,
   type RiskLevel,
 } from "./candidateRisk";
+import { sensorKey } from "./thresholds";
 import { buildLiveTask, toHourly } from "./liveSeries";
 import { buildReplayRows, type ReplayRow } from "./replayEngine";
 
@@ -38,6 +40,9 @@ export const STATUS_HORIZONS = [1, 3] as const;
 export interface Threshold {
   caution: number;
   alarm: number;
+  /** 方向（越高越危險／越低越危險）；沒有就用該感測器的預設 */
+  direction?: RiskDirection;
+  degenerate?: boolean;
   /** 這組門檻的來源：歷史百分位計算、管理員調整；沒有就是程式內的假定值 */
   source?: "history" | "admin";
   note?: string;
@@ -72,6 +77,10 @@ export interface DomainStatus {
   horizons: HorizonView[];
   level: Safety;
   source: "precomputed" | "import" | "engine" | "baseline";
+  /** 這個場域所有受監看的感測器各自的狀態（有預測的感測器；主要那個也在裡面）。子項目的 sensorStatuses 是空的 */
+  sensorStatuses: DomainStatus[];
+  /** 是否為場域的政策（代表）感測器 */
+  isPolicySensor: boolean;
   /** 風險門檻來源與說明（歷史百分位／管理員調整／假定值） */
   thresholdSource: "history" | "admin" | "assumed";
   thresholdNote: string;
@@ -159,19 +168,51 @@ export function taskFor(
   return { task: pre, source: "precomputed" };
 }
 
-export function computeDomainStatus(input: StatusInput): DomainStatus {
-  const s = computeCore(input);
-  const o = input.overrides?.[input.dataset.id];
-  if (s.policy) {
-    s.thresholdSource = o?.source ?? (o ? "admin" : "assumed");
-    s.thresholdNote = o?.note ?? (o ? "管理員調整" : "假定值（沒有歷史資料可算）");
-  }
-  return s;
+/** 受監看的感測器：政策感測器＋有預測任務的感測器（預計算、引擎即時） */
+export function monitoredSensors(input: StatusInput): string[] {
+  const id = input.dataset.id;
+  const set = new Set<string>();
+  const base = CANDIDATE_POLICIES[id];
+  if (base) set.add(base.sensor);
+  if (input.forecasts) for (const t of Object.values(input.forecasts.tasks)) if (t.dataset_id === id && t.horizon_h === 1) set.add(t.sensor);
+  if (input.engine) for (const t of input.engine.forecast.tasks) if (t.horizon_h === 1) set.add(t.sensor);
+  return [...set];
 }
 
-function computeCore(input: StatusInput): DomainStatus {
+/** 場域狀態＝所有受監看感測器中最嚴重者；非代表感測器的「先確認資料」只標在自己身上，不拉高場域等級。 */
+export function computeDomainStatus(input: StatusInput): DomainStatus {
   const { dataset } = input;
   const base = CANDIDATE_POLICIES[dataset.id];
+  const parts: DomainStatus[] = [];
+  for (const sensor of monitoredSensors(input)) {
+    const isPolicy = !!base && base.sensor === sensor;
+    const ov = input.overrides ?? {};
+    const thr = ov[sensorKey(dataset.id, sensor)] ?? (isPolicy ? ov[dataset.id] : undefined);
+    const policy = policyForSensor(
+      dataset,
+      sensor,
+      thr ? { caution: thr.caution, alarm: thr.alarm, direction: thr.direction ?? (isPolicy ? base!.direction : "above"), degenerate: thr.degenerate } : undefined
+    );
+    if (!policy) continue;
+    const st = computeCore(input, policy);
+    if (!st.policy) continue;
+    st.isPolicySensor = isPolicy;
+    st.thresholdSource = thr?.source ?? (thr ? "admin" : "assumed");
+    st.thresholdNote = thr?.note ?? (thr ? "管理員調整" : "假定值（沒有歷史資料可算）");
+    parts.push(st);
+  }
+  if (parts.length === 0) return computeCore(input, null);
+  const eff = (p: DomainStatus): Safety => (p.level === "data" && !p.isPolicySensor ? "safe" : p.level);
+  let best = parts[0];
+  for (const p of parts) {
+    const better = SAFETY_RANK[eff(p)] > SAFETY_RANK[eff(best)] || (SAFETY_RANK[eff(p)] === SAFETY_RANK[eff(best)] && p.isPolicySensor && !best.isPolicySensor);
+    if (better) best = p;
+  }
+  return { ...best, level: eff(best), sensorStatuses: parts.map((p) => ({ ...p, sensorStatuses: [] })) };
+}
+
+function computeCore(input: StatusInput, policy: CandidatePolicy | null): DomainStatus {
+  const { dataset } = input;
   const empty: DomainStatus = {
     datasetId: dataset.id,
     name: dataset.display_name,
@@ -187,6 +228,8 @@ function computeCore(input: StatusInput): DomainStatus {
     horizons: [],
     level: "none",
     source: "precomputed",
+    sensorStatuses: [],
+    isPolicySensor: false,
     thresholdSource: "assumed",
     thresholdNote: "",
     incomplete: null,
@@ -197,9 +240,7 @@ function computeCore(input: StatusInput): DomainStatus {
     alert: false,
     spark: [],
   };
-  if (!base) return empty;
-  const o = input.overrides?.[dataset.id];
-  const policy = o ? applyOverride(base, o.caution, o.alarm) : base;
+  if (!policy) return empty;
   const events = input.anomalies?.events ?? [];
 
   const hasImport = !!input.liveRows && input.liveRows.length > 0 && !input.liveIsBase;
@@ -251,6 +292,8 @@ function computeCore(input: StatusInput): DomainStatus {
     horizons,
     level,
     source,
+    sensorStatuses: [],
+    isPolicySensor: false,
     thresholdSource: "assumed",
     thresholdNote: "",
     incomplete: source === "baseline" ? incompleteNote(input.dataset, input.maskedRows) : null,

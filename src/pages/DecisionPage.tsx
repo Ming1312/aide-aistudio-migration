@@ -46,7 +46,11 @@ interface Row {
   band?: [number, number] | null;
 }
 
-export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData, canRecord, onLogin }) => {
+export const DecisionPage: React.FC<Props> = ({ status: domainStatus, input, onOpenData, canRecord, onLogin }) => {
+  // 這個場域有多個受監看的感測器：預設看最嚴重的那個，也可以用上方的按鈕換
+  const [selSensor, setSelSensor] = useState<string | null>(null);
+  useEffect(() => setSelSensor(null), [domainStatus.datasetId]);
+  const status = domainStatus.sensorStatuses.find((x) => x.sensor === selSensor) ?? domainStatus;
   const [ai, setAi] = useState<AiResult | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [chosen, setChosen] = useState<string[]>([]);
@@ -55,7 +59,7 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData, canRe
   const cache = useRef(new Map<string, AiResult | null>());
   const policy = status.policy;
 
-  const key = `${status.datasetId}|${status.asOf}|${status.level}|${status.source}|${policy?.caution}|${policy?.alarm}`;
+  const key = `${status.datasetId}|${status.sensor}|${status.asOf}|${status.level}|${status.source}|${policy?.caution}|${policy?.alarm}`;
   useEffect(() => {
     setChosen([]);
     setNote("");
@@ -164,6 +168,29 @@ export const DecisionPage: React.FC<Props> = ({ status, input, onOpenData, canRe
 
   return (
     <div className="space-y-3">
+      {domainStatus.sensorStatuses.length > 1 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="感測器" data-testid="sensor-chips">
+          {domainStatus.sensorStatuses.map((x) => {
+            const active = (selSensor ?? domainStatus.sensor) === x.sensor;
+            return (
+              <button
+                key={x.sensor}
+                type="button"
+                onClick={() => setSelSensor(x.sensor)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium ${
+                  active ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span className="inline-block h-2 w-2 rounded-full" style={{ background: SAFETY_STYLE[x.level].dot }} aria-hidden />
+                {x.sensor}
+                <span className="sr-only">{SAFETY_TEXT[x.level]}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* 狀態 */}
       <section className={`rounded-lg border p-4 flex flex-wrap items-center justify-between gap-3 ${st.bg} ${st.border} ${st.text}`} data-testid="decision-status" data-level={status.level}>
         <div>

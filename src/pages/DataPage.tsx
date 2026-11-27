@@ -18,12 +18,15 @@ import { loadRealCsv } from "../lib/dataLoader";
 import { buildLiveTask, mergeRows, toHourly } from "../lib/liveSeries";
 import { parseLocalTimestampMs } from "../lib/trendChart";
 import type { ParsedCsvRow } from "../types/app";
+import { sensorKey, type ThresholdMap } from "../lib/thresholds";
 import { Card, Chip, SERIES_COLORS, SERIES_DASH } from "../components/ui";
 
 interface Props {
   dataset: RealDataset;
   forecasts: PrecomputedForecasts | null;
   importedRows: ParsedCsvRow[];
+  /** 各感測器的風險門檻（key＝場域::感測器） */
+  thresholds: ThresholdMap;
 }
 
 const MODEL_LABEL: Record<ModelKey, string> = {
@@ -53,7 +56,8 @@ const fmtTick = (ms: number) => {
 
 type Pt = { t: number; [k: string]: number | null | Record<string, number | null> };
 
-export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) => {
+export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows, thresholds }) => {
+  const [showThr, setShowThr] = useState(true);
   const [baseRows, setBaseRows] = useState<ParsedCsvRow[] | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
@@ -221,6 +225,13 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
   );
 
   const chartFor = (keys: string[], height: number, yLabel?: string) => {
+    // 門檻線：只在不標準化時畫（標準化後的縱軸不是原始單位）
+    const lines = doNormalize
+      ? []
+      : keys.flatMap((k) => {
+          const t = thresholds[sensorKey(dataset.id, k)];
+          return t ? [{ k, caution: t.caution, alarm: t.alarm, low: Math.min(t.caution, t.alarm), high: Math.max(t.caution, t.alarm) }] : [];
+        });
     const seriesKeys = keys.flatMap((k) => (showForecast && tasks.get(k) ? [k, `${k}·預測`] : [k]));
     return (
       <ResponsiveContainer width="100%" height={height}>
@@ -230,7 +241,7 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
           <YAxis
             tick={{ fontSize: 11, fill: "#898781" }}
             width={44}
-            domain={doNormalize ? [0, 100] : ["auto", "auto"]}
+            domain={doNormalize ? [0, 100] : showThr && lines.length > 0 ? [(min: number) => Math.min(min, ...lines.map((l) => l.low)), (max: number) => Math.max(max, ...lines.map((l) => l.high))] : ["auto", "auto"]}
             tickFormatter={(v: number) => (doNormalize ? `${Math.round(v)}%` : String(Math.round(v * 10) / 10))}
             label={yLabel ? { value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#898781" } : undefined}
           />
@@ -238,6 +249,13 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
           {importStart !== null && points.length > 0 && importStart >= points[0].t && (
             <ReferenceLine x={importStart} stroke="#898781" strokeDasharray="4 4" label={{ value: "匯入起點", fontSize: 10, fill: "#898781", position: "insideTopRight" }} />
           )}
+          {showThr &&
+            lines.map((l) => (
+              <React.Fragment key={`thr-${l.k}`}>
+                <ReferenceLine y={l.caution} stroke="#fab219" strokeDasharray="4 3" label={{ value: lines.length > 1 ? `${l.k} 注意` : "注意", fontSize: 10, fill: "#52514e", position: "insideTopLeft" }} />
+                <ReferenceLine y={l.alarm} stroke="#d03b3b" strokeDasharray="4 3" label={{ value: lines.length > 1 ? `${l.k} 警戒` : "警戒", fontSize: 10, fill: "#52514e", position: "insideTopLeft" }} />
+              </React.Fragment>
+            ))}
           {seriesKeys.map((k) => {
             const base = k.replace("·預測", "");
             const idx = Math.max(0, picked.indexOf(base));
@@ -385,6 +403,9 @@ export const DataPage: React.FC<Props> = ({ dataset, forecasts, importedRows }) 
               標準化（0–100%）
             </label>
           )}
+          <Chip active={showThr} onClick={() => setShowThr((v) => !v)} title="顯示各感測器的注意／警戒門檻線（標準化時不顯示）">
+            門檻線
+          </Chip>
           <div className="flex items-center gap-1.5">
             <Chip active={showForecast} onClick={() => setShowForecast((v) => !v)}>
               加入預測

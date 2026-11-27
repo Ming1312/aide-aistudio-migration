@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight, Lock, RefreshCw, Unlock } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
-import { CANDIDATE_POLICIES } from "../lib/candidateRisk";
-import { DEFAULT_PCT, PCT_MAX, PCT_MIN, validPct, type Pct, type ThresholdMap } from "../lib/thresholds";
+import type { RiskDirection } from "../lib/candidateRisk";
+import { DEFAULT_PCT, PCT_MAX, PCT_MIN, sensorKey, validPct, type Pct, type ThresholdMap, type ThresholdTable } from "../lib/thresholds";
 import { loadDataUseStatement } from "../lib/dataLoader";
 import type { ThresholdOverrides } from "../lib/status";
 import type { EngineState } from "../lib/useEngine";
@@ -23,6 +23,13 @@ interface Props {
   historyThresholds: ThresholdMap;
   pct: Pct;
   onChangePct: (next: Pct) => void;
+  /** 管理員改過方向的感測器 */
+  dirs: Record<string, RiskDirection>;
+  onChangeDirs: (next: Record<string, RiskDirection>) => void;
+  /** 有哪些感測器可以設門檻（歷史資料表）；null＝只有代表感測器 */
+  thresholdTable: ThresholdTable | null;
+  /** 場域 → 受監看（有預測）的感測器 */
+  monitored: Record<string, string[]>;
   /** null = 這個角色看不到引擎狀態 */
   engine: EngineState | null;
 }
@@ -53,6 +60,10 @@ export const SettingsPage: React.FC<Props> = ({
   historyThresholds,
   pct,
   onChangePct,
+  dirs,
+  onChangeDirs,
+  thresholdTable,
+  monitored,
   engine,
 }) => {
   const [pctDraft, setPctDraft] = useState({ caution: String(Math.round(pct.caution * 1000) / 10), alarm: String(Math.round(pct.alarm * 1000) / 10) });
@@ -68,17 +79,25 @@ export const SettingsPage: React.FC<Props> = ({
       .catch(() => setStatement("無法載入"));
   }, [wantStatement, statement]);
 
-  const setThreshold = (id: string, field: "caution" | "alarm", raw: string) => {
-    const base = CANDIDATE_POLICIES[id];
-    if (!base) return;
+  const setThreshold = (key: string, field: "caution" | "alarm", raw: string) => {
     const v = Number(raw);
     if (!Number.isFinite(v)) return;
-    const cur = overrides[id] ?? thresholds[id] ?? { caution: base.caution, alarm: base.alarm };
-    onChangeOverrides({ ...overrides, [id]: { caution: cur.caution, alarm: cur.alarm, [field]: v } });
+    const cur = overrides[key] ?? thresholds[key];
+    if (!cur) return;
+    onChangeOverrides({ ...overrides, [key]: { caution: cur.caution, alarm: cur.alarm, [field]: v } });
   };
-  const reset = (id: string) => {
-    const { [id]: _drop, ...rest } = overrides;
+  const reset = (key: string) => {
+    const { [key]: _drop, ...rest } = overrides;
     onChangeOverrides(rest);
+  };
+  const setDir = (key: string, dir: RiskDirection) => {
+    onChangeDirs({ ...dirs, [key]: dir });
+    reset(key); // 方向變了，原本調的數字就不適用，回到歷史計算
+  };
+  const resetAll = (id: string) => {
+    const prefix = `${id}::`;
+    onChangeOverrides(Object.fromEntries(Object.entries(overrides).filter(([k]) => !k.startsWith(prefix))));
+    onChangeDirs(Object.fromEntries(Object.entries(dirs).filter(([k]) => !k.startsWith(prefix))));
   };
 
   return (
@@ -211,77 +230,122 @@ export const SettingsPage: React.FC<Props> = ({
             </>
           )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="threshold-table">
-            <thead>
-              <tr className="text-left text-xs text-slate-500">
-                <th className="py-1 pr-3 font-medium">場域</th>
-                <th className="py-1 pr-3 font-medium">感測器</th>
-                <th className="py-1 pr-3 font-medium">注意</th>
-                <th className="py-1 pr-3 font-medium">警戒</th>
-                <th className="py-1 font-medium">來源</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {datasets.map((d) => {
-                const p = CANDIDATE_POLICIES[d.id];
-                if (!p) {
-                  return (
-                    <tr key={d.id} className="border-t border-slate-100 text-slate-400">
-                      <td className="py-1.5 pr-3">{d.display_name.split("（")[0]}</td>
-                      <td colSpan={5}>無風險模型</td>
-                    </tr>
-                  );
-                }
-                const o = overrides[d.id];
-                const eff = thresholds[d.id] ?? { caution: p.caution, alarm: p.alarm, source: undefined, note: "假定值（沒有歷史資料可算）" };
-                const hist = historyThresholds[d.id];
-                return (
-                  <tr key={d.id} className="border-t border-slate-100" data-source={o ? "admin" : hist ? "history" : "assumed"}>
-                    <td className="py-1.5 pr-3 text-slate-900">{d.display_name.split("（")[0]}</td>
-                    <td className="py-1.5 pr-3 text-slate-600">
-                      {p.sensor} <span className="text-slate-400">{p.unit}</span> <span className="text-slate-400">{p.direction === "above" ? "↑" : "↓"}</span>
-                    </td>
-                    {(["caution", "alarm"] as const).map((f) => (
-                      <td key={f} className="py-1.5 pr-3">
-                        <input
-                          type="number"
-                          step="any"
-                          aria-label={`${d.display_name} ${f === "caution" ? "注意" : "警戒"}`}
-                          value={eff[f]}
-                          disabled={!canEditThresholds}
-                          onChange={(e) => setThreshold(d.id, f, e.target.value)}
-                          className={`w-20 rounded border px-2 py-1 text-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-500 ${o ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300"}`}
-                        />
-                      </td>
-                    ))}
-                    <td className="py-1.5 pr-2 text-[11px] text-slate-500 max-w-[14rem]">
-                      {o ? (
-                        <span>
-                          管理員調整
-                          {hist && (
-                            <span className="text-slate-400">
-                              （歷史計算：{hist.caution}／{hist.alarm}）
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        eff.note
-                      )}
-                    </td>
-                    <td className="py-1.5">
-                      {o && canEditThresholds && (
-                        <button type="button" onClick={() => reset(d.id)} className="text-xs text-[#0B63CE] hover:underline whitespace-nowrap">
-                          {hist ? "重設為歷史計算" : "重設"}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="space-y-2" data-testid="threshold-table">
+          {datasets.map((d) => {
+            const entries = Object.keys(thresholdTable?.datasets[d.id]?.sensors ?? {});
+            const mon = new Set(monitored[d.id] ?? []);
+            // 受監看的感測器排前面，其餘照資料表順序
+            const sensors = [...entries].sort((x, y) => Number(mon.has(y)) - Number(mon.has(x)));
+            const adjusted = sensors.filter((sn) => overrides[sensorKey(d.id, sn)] || dirs[sensorKey(d.id, sn)]).length;
+            return (
+              <details key={d.id} className="group border border-slate-200 rounded-md bg-white" data-testid={`thr-domain-${d.id}`} open={d.id === defaultDatasetId}>
+                <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer text-sm font-medium text-slate-900 list-none">
+                  <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
+                  {d.display_name.split("（")[0]}
+                  <span className="text-xs font-normal text-slate-500">
+                    {sensors.length} 個感測器・{mon.size} 個監看中{adjusted > 0 ? `・已調整 ${adjusted}` : ""}
+                  </span>
+                  {canEditThresholds && adjusted > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        resetAll(d.id);
+                      }}
+                      className="ml-auto text-xs text-[#0B63CE] hover:underline"
+                    >
+                      全部重設
+                    </button>
+                  )}
+                </summary>
+                <div className="px-3 pb-3 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-slate-500">
+                        <th className="py-1 pr-3 font-medium">感測器</th>
+                        <th className="py-1 pr-3 font-medium">方向</th>
+                        <th className="py-1 pr-3 font-medium">注意</th>
+                        <th className="py-1 pr-3 font-medium">警戒</th>
+                        <th className="py-1 font-medium">來源</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sensors.map((sn) => {
+                        const key = sensorKey(d.id, sn);
+                        const eff = thresholds[key];
+                        const hist = historyThresholds[key];
+                        const o = overrides[key];
+                        const col = d.columns.find((c) => c.key === sn);
+                        const dir = eff?.direction ?? "above";
+                        return (
+                          <tr key={sn} className="border-t border-slate-100" data-sensor={sn} data-source={o ? "admin" : hist ? "history" : "none"}>
+                            <td className="py-1.5 pr-3 text-slate-900">
+                              {mon.has(sn) && (
+                                <span className="text-emerald-600 mr-1" title="監看中（有預測，會納入總覽狀態）">
+                                  ●
+                                </span>
+                              )}
+                              {sn} <span className="text-slate-400">{col?.unit}</span>
+                            </td>
+                            <td className="py-1.5 pr-3">
+                              <select
+                                value={dir}
+                                disabled={!canEditThresholds}
+                                aria-label={`${sn} 方向`}
+                                onChange={(e) => setDir(key, e.target.value as RiskDirection)}
+                                className="rounded border border-slate-300 bg-white px-1 py-1 text-xs disabled:bg-slate-50 disabled:text-slate-500"
+                              >
+                                <option value="above">越高越危險 ↑</option>
+                                <option value="below">越低越危險 ↓</option>
+                              </select>
+                            </td>
+                            {(["caution", "alarm"] as const).map((f) => (
+                              <td key={f} className="py-1.5 pr-3">
+                                {eff ? (
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    aria-label={`${d.display_name} ${sn} ${f === "caution" ? "注意" : "警戒"}`}
+                                    value={eff[f]}
+                                    disabled={!canEditThresholds}
+                                    onChange={(e) => setThreshold(key, f, e.target.value)}
+                                    className={`w-20 rounded border px-2 py-1 text-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-500 ${o ? "border-[#0B63CE] bg-[#EFF6FF]" : "border-slate-300"}`}
+                                  />
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                            ))}
+                            <td className="py-1.5 pr-2 text-[11px] text-slate-500 max-w-[14rem]">
+                              {o ? (
+                                <span>
+                                  管理員調整
+                                  {hist && <span className="text-slate-400">（歷史計算：{hist.caution}／{hist.alarm}）</span>}
+                                </span>
+                              ) : (
+                                <>
+                                  {eff?.note ?? "資料不足"}
+                                  {eff?.degenerate && <span className="block text-amber-700">讀值變化太小，不納入監看（要監看請手動設門檻）</span>}
+                                </>
+                              )}
+                            </td>
+                            <td className="py-1.5">
+                              {o && canEditThresholds && (
+                                <button type="button" onClick={() => reset(key)} className="text-xs text-[#0B63CE] hover:underline whitespace-nowrap">
+                                  重設為歷史計算
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            );
+          })}
         </div>
       </Card>
 
