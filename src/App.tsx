@@ -15,7 +15,7 @@ import {
 import { mergeRows } from "./lib/liveSeries";
 import { CANDIDATE_POLICIES, findTask } from "./lib/candidateRisk";
 import type { RiskDirection } from "./lib/candidateRisk";
-import { DEFAULT_PCT, resolveThresholds, sensorKey, validPct, validValues, type Pct, type ThresholdTable } from "./lib/thresholds";
+import { DEFAULT_PCT, resolveThresholds, sensorKey, validPct, validValuesWith, type Pct, type ThresholdTable } from "./lib/thresholds";
 import { loadJson, saveJson } from "./lib/storage";
 import { computeDomainStatus, maskOutageRows, type StatusInput, type ThresholdOverrides } from "./lib/status";
 import { useEngine } from "./lib/useEngine";
@@ -32,6 +32,7 @@ const OVERRIDES_KEY = "aide.thresholds.v1";
 const DEFAULT_DS_KEY = "aide.defaultDataset.v1";
 const PCT_KEY = "aide.thresholdPct.v1";
 const DIRS_KEY = "aide.thresholdDirs.v1";
+const ENG_THR_KEY = "aide.thresholdUseEngine.v1";
 
 /** 舊版的管理員調整以場域代號為鍵（只有政策感測器）；轉成「場域::感測器」 */
 function migrateOverrides(raw: ThresholdOverrides): ThresholdOverrides {
@@ -64,6 +65,7 @@ export const App: React.FC = () => {
   const [datasetId, setDatasetId] = useState<string>(initialRoute.dataset || loadJson<string>(DEFAULT_DS_KEY, "sheep_barn"));
   const [activePage, setActivePage] = useState<PageId>(initialRoute.page);
   const [overrides, setOverrides] = useState<ThresholdOverrides>(() => migrateOverrides(loadJson<ThresholdOverrides>(OVERRIDES_KEY, {})));
+  const [useEngineThr, setUseEngineThr] = useState<boolean>(() => loadJson<boolean>(ENG_THR_KEY, true));
   const [dirs, setDirs] = useState<Record<string, RiskDirection>>(() => loadJson<Record<string, RiskDirection>>(DIRS_KEY, {}));
   const [thresholdTable, setThresholdTable] = useState<ThresholdTable | null>(null);
   const [pct, setPct] = useState<Pct>(() => {
@@ -114,7 +116,9 @@ export const App: React.FC = () => {
         .map((d) => d.id),
     [catalog, forecasts]
   );
-  const needBase = Array.from(new Set([...importedIds, ...baselineIds]));
+  // 連到引擎時，門檻要併入引擎的即時觀測值，所以也需要這些場域的原始資料
+  const engineIds = useEngineThr && engine.connected ? Object.keys(engine.data) : [];
+  const needBase = Array.from(new Set([...importedIds, ...baselineIds, ...engineIds]));
   const importedKey = needBase.join(",");
   useEffect(() => {
     let cancelled = false;
@@ -135,21 +139,31 @@ export const App: React.FC = () => {
 
   // 風險門檻：管理員調整 ＞ 歷史百分位計算（匯入資料後以合併資料精確重算）＞ 程式內的假定值
   const thresholds = useMemo(() => {
-    const exact: Record<string, { values: number[]; from: string; to: string; direction: RiskDirection }> = {};
+    const exact: Record<string, { values: number[]; from: string; to: string; direction: RiskDirection; noteSuffix?: string }> = {};
+    const useEng = useEngineThr && engine.connected;
     for (const ds of datasets) {
-      const imp = importer.imported[ds.id];
+      const imp = importer.imported[ds.id] ?? [];
       const base = baseRows[ds.id];
       const sensors = thresholdTable?.datasets[ds.id]?.sensors;
-      if (!sensors || !imp || imp.length === 0 || !base) continue;
-      const merged = mergeRows(base, imp);
+      if (!sensors || !base) continue;
+      const rows = imp.length > 0 ? mergeRows(base, imp) : base;
       const events = anomaliesMap[ds.id]?.events ?? [];
       for (const [sensor, entry] of Object.entries(sensors)) {
-        const v = validValues(merged, sensor, events);
-        exact[sensorKey(ds.id, sensor)] = { values: v.values, from: v.from, to: v.to, direction: dirs[sensorKey(ds.id, sensor)] ?? entry.direction };
+        const key = sensorKey(ds.id, sensor);
+        const extra = useEng ? engine.series[key] : undefined;
+        if (imp.length === 0 && !(extra && extra.length > 0)) continue; // 沒有新資料：用預先算好的表
+        const v = validValuesWith(rows, sensor, events, extra ?? []);
+        exact[key] = {
+          values: v.values,
+          from: v.from,
+          to: v.to,
+          direction: dirs[key] ?? entry.direction,
+          noteSuffix: v.added > 0 ? `・含引擎資料 ${v.added} 筆${engine.synthetic ? "（模擬）" : ""}` : "",
+        };
       }
     }
     return resolveThresholds({ table: thresholdTable, pct, admin: overrides, dirs, exact });
-  }, [datasets, thresholdTable, pct, overrides, dirs, importer.imported, baseRows, anomaliesMap]);
+  }, [datasets, thresholdTable, pct, overrides, dirs, importer.imported, baseRows, anomaliesMap, useEngineThr, engine.connected, engine.series, engine.synthetic]);
 
   const inputs = useMemo(() => {
     const m = new Map<string, StatusInput>();
@@ -193,6 +207,10 @@ export const App: React.FC = () => {
   const changeOverrides = useCallback((next: ThresholdOverrides) => {
     setOverrides(next);
     saveJson(OVERRIDES_KEY, next);
+  }, []);
+  const changeUseEngineThr = useCallback((v: boolean) => {
+    setUseEngineThr(v);
+    saveJson(ENG_THR_KEY, v);
   }, []);
   const changeDirs = useCallback((next: Record<string, RiskDirection>) => {
     setDirs(next);
@@ -263,6 +281,8 @@ export const App: React.FC = () => {
             dirs={dirs}
             onChangeDirs={changeDirs}
             thresholdTable={thresholdTable}
+            useEngineThr={useEngineThr}
+            onChangeUseEngineThr={changeUseEngineThr}
             monitored={Object.fromEntries(statuses.map((st) => [st.datasetId, st.sensorStatuses.map((x) => x.sensor ?? "")]))}
             engine={can(adminRole.role, "view_engine") ? engine : null}
           />

@@ -56,14 +56,15 @@ export function computeFromValues(
   values: number[],
   direction: RiskDirection,
   pct: Pct = DEFAULT_PCT,
-  range: { from: string; to: string } = { from: "", to: "" }
+  range: { from: string; to: string } = { from: "", to: "" },
+  noteSuffix = ""
 ): ThresholdRange | null {
   const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
   if (v.length < MIN_VALUES || !validPct(pct)) return null;
   const [pc, pa] = tailProbs(direction, pct);
   const caution = round1(quantile(v, pc));
   const alarm = round1(quantile(v, pa));
-  return { caution, alarm, direction, degenerate: caution === alarm, source: "history", note: noteFor(pct, v.length, range.from, range.to) };
+  return { caution, alarm, direction, degenerate: caution === alarm, source: "history", note: noteFor(pct, v.length, range.from, range.to) + noteSuffix };
 }
 
 /** 從「感測器的有效數值（略過斷電／歸零時段）」取值：離線產生表與匯入後重算共用 */
@@ -87,6 +88,52 @@ export function validValues(rows: ParsedCsvRow[], sensor: string, events: Anomal
     if (!to || r.timestamp > to) to = r.timestamp;
   }
   return { values, from, to, excluded };
+}
+
+const fmtMs = (ms: number) => {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+/**
+ * 原始（＋匯入）資料再併入引擎的即時觀測值：同一個時間點以引擎的為準，新時間點加進來。
+ * 回傳的 added＝引擎新增的點數（用來在說明裡標示「含引擎資料 N 筆」）。
+ */
+export function validValuesWith(
+  rows: ParsedCsvRow[],
+  sensor: string,
+  events: AnomalyEvent[],
+  extra: Array<{ t: number; v: number }>
+): { values: number[]; from: string; to: string; excluded: number; added: number } {
+  const spans = events
+    .filter((e) => e.kind === "outage_zero_rows")
+    .map((e) => [Date.parse(e.start.replace(" ", "T")), Date.parse(e.end.replace(" ", "T"))] as const);
+  const map = new Map<number, number>();
+  let excluded = 0;
+  for (const r of rows) {
+    const x = r.values[sensor];
+    if (typeof x !== "number" || !Number.isFinite(x)) continue;
+    if (spans.some(([a, b]) => r.tsMs >= a && r.tsMs <= b)) {
+      excluded += 1;
+      continue;
+    }
+    map.set(r.tsMs, x);
+  }
+  let added = 0;
+  for (const p of extra) {
+    if (!Number.isFinite(p.v)) continue;
+    if (!map.has(p.t)) added += 1;
+    map.set(p.t, p.v);
+  }
+  const ts = [...map.keys()];
+  return {
+    values: [...map.values()],
+    from: ts.length ? fmtMs(Math.min(...ts)) : "",
+    to: ts.length ? fmtMs(Math.max(...ts)) : "",
+    excluded,
+    added,
+  };
 }
 
 // ---- 每個感測器一組門檻
@@ -174,7 +221,7 @@ export function resolveThresholds(args: {
   admin: Record<string, { caution: number; alarm: number }>;
   dirs?: Record<string, RiskDirection>;
   /** 匯入後可用精確重算的資料：key → 有效數值 */
-  exact?: Record<string, { values: number[]; from: string; to: string; direction: RiskDirection }>;
+  exact?: Record<string, { values: number[]; from: string; to: string; direction: RiskDirection; noteSuffix?: string }>;
 }): { effective: ThresholdMap; history: ThresholdMap } {
   const history: ThresholdMap = {};
   const effective: ThresholdMap = {};
@@ -186,7 +233,7 @@ export function resolveThresholds(args: {
     const entry = args.table?.datasets[id]?.sensors[sensor];
     const dir = args.dirs?.[k] ?? entry?.direction ?? args.exact?.[k]?.direction ?? "above";
     const ex = args.exact?.[k];
-    let h: ThresholdRange | null = ex ? computeFromValues(ex.values, dir, args.pct, { from: ex.from, to: ex.to }) : null;
+    let h: ThresholdRange | null = ex ? computeFromValues(ex.values, dir, args.pct, { from: ex.from, to: ex.to }, ex.noteSuffix) : null;
     if (!h && entry) h = fromEntry(entry, args.pct, dir);
     if (h) history[k] = h;
     const a = args.admin[k];

@@ -1,6 +1,7 @@
 // 連到你電腦上的分析引擎：定時問 /api/health，連上時抓各場域的即時預測與狀態。
 // 引擎網址與金鑰只存在伺服器環境變數；這裡只透過同源的 /api/live/* 讀取（唯讀）。
 import { useCallback, useEffect, useRef, useState } from "react";
+import { parseLocalTimestampMs } from "./trendChart";
 import { fetchApiHealth, fetchLiveForecast, fetchLiveStatus } from "./dataLoader";
 import type { EngineDomain } from "./status";
 
@@ -14,8 +15,12 @@ export interface EngineState {
   error: string | null;
   busy: boolean;
   data: Record<string, EngineDomain>;
+  /** 累積下來的引擎觀測值（key＝場域::感測器）：每次輪詢把引擎給的歷史視窗併進來，依時間去重 */
+  series: Record<string, Array<{ t: number; v: number }>>;
   refresh: () => void;
 }
+
+const MAX_POINTS = 20000;
 
 export const ENGINE_POLL_SEC = 30;
 
@@ -30,7 +35,9 @@ export function useEngine(datasetIds: string[], enabled = true): EngineState {
     error: null,
     busy: false,
     data: {},
+    series: {},
   });
+  const acc = useRef(new Map<string, Map<number, number>>());
   const idsKey = datasetIds.join(",");
   const alive = useRef(true);
 
@@ -70,6 +77,21 @@ export function useEngine(datasetIds: string[], enabled = true): EngineState {
         if (d) data[id] = d;
         else if (!firstErr && err) firstErr = err instanceof Error ? err.message : "讀取失敗";
       }
+      // 累積引擎的觀測歷史（同一個感測器的多個預測時距共用同一段歷史）
+      for (const [id, d] of Object.entries(data)) {
+        for (const t of d.forecast.tasks) {
+          const key = `${id}::${t.sensor}`;
+          let m = acc.current.get(key);
+          if (!m) acc.current.set(key, (m = new Map()));
+          for (const p of t.history ?? []) {
+            const ms = parseLocalTimestampMs(p.time);
+            if (ms > 0 && typeof p.value === "number" && Number.isFinite(p.value)) m.set(ms, p.value);
+          }
+          while (m.size > MAX_POINTS) m.delete(Math.min(...m.keys()));
+        }
+      }
+      const series: Record<string, Array<{ t: number; v: number }>> = {};
+      for (const [k, m] of acc.current) series[k] = [...m.entries()].sort((a, b) => a[0] - b[0]).map(([t, v]) => ({ t, v }));
       const got = Object.keys(data).length;
       if (alive.current)
         setState({
@@ -82,6 +104,7 @@ export function useEngine(datasetIds: string[], enabled = true): EngineState {
           error: got > 0 ? null : firstErr ?? "引擎沒有回傳即時預測",
           busy: false,
           data,
+          series,
         });
     } catch (e) {
       if (alive.current)

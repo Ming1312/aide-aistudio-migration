@@ -28,6 +28,9 @@ interface Props {
   onChangeDirs: (next: Record<string, RiskDirection>) => void;
   /** 有哪些感測器可以設門檻（歷史資料表）；null＝只有代表感測器 */
   thresholdTable: ThresholdTable | null;
+  /** 連到引擎時，是否把引擎的即時觀測值併入門檻計算 */
+  useEngineThr: boolean;
+  onChangeUseEngineThr: (v: boolean) => void;
   /** 場域 → 受監看（有預測）的感測器 */
   monitored: Record<string, string[]>;
   /** null = 這個角色看不到引擎狀態 */
@@ -63,6 +66,8 @@ export const SettingsPage: React.FC<Props> = ({
   dirs,
   onChangeDirs,
   thresholdTable,
+  useEngineThr,
+  onChangeUseEngineThr,
   monitored,
   engine,
 }) => {
@@ -177,6 +182,17 @@ export const SettingsPage: React.FC<Props> = ({
         title="風險門檻"
         right={<span className="text-[10px] text-slate-500">{canEditThresholds ? "預設由歷史資料計算，可手動調整" : "預設由歷史資料計算；修改需要管理員身分"}</span>}
       >
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-700" data-testid="engine-thr">
+          <label className="inline-flex items-center gap-1.5">
+            <input type="checkbox" checked={useEngineThr} disabled={!canEditThresholds} onChange={(e) => onChangeUseEngineThr(e.target.checked)} />
+            連到引擎時，把引擎的即時資料併入門檻計算
+          </label>
+          {engine && (
+            <span className={engine.connected && useEngineThr ? "text-emerald-700 font-medium" : "text-slate-500"}>
+              {engine.connected ? (useEngineThr ? `● 已併入${engine.synthetic ? "（引擎是模擬資料流）" : ""}` : "已關閉，用歷史資料") : "引擎未連線，用歷史資料"}
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-end gap-x-4 gap-y-2 mb-3" data-testid="pct-controls">
           <label className="text-xs text-slate-600">
             注意百分位（%）
@@ -354,7 +370,7 @@ export const SettingsPage: React.FC<Props> = ({
           <Fold title="安全等級怎麼來">
             <p>每個場域用一個代表感測器，搭配「注意」「警戒」兩條門檻。取「現在」「+1 小時」「+3 小時」中最嚴重的一個當整體等級。</p>
             <p>感測器可信度不足時，改顯示「先確認資料」，避免依壞資料做決策。</p>
-            <p>門檻預設由該感測器的歷史資料算出：注意＝第 90 百分位、警戒＝第 97.5 百分位（越低越危險的感測器取對稱的下尾），略過偵測器標出的斷電歸零時段。這是「統計上多罕見」，不是安全標準，也不是資料提供者確認的值；整段歷史都拿來算，所以對歷史資料本身是樣本內的結果。管理員可以改百分位或直接改數字；匯入新資料後會用合併資料重算。</p>
+            <p>門檻預設由該感測器的歷史資料算出：注意＝第 90 百分位、警戒＝第 97.5 百分位（越低越危險的感測器取對稱的下尾），略過偵測器標出的斷電歸零時段。這是「統計上多罕見」，不是安全標準，也不是資料提供者確認的值；整段歷史都拿來算，所以對歷史資料本身是樣本內的結果。管理員可以改百分位或直接改數字；匯入新資料後會用合併資料重算。連到引擎時，也會把引擎給的最近觀測值（每次輪詢累積）併入有預測的感測器重算；引擎的資料流是模擬資料，所以門檻會被模擬值影響，不想要可以關掉這個選項。</p>
           </Fold>
           <Fold title="預測怎麼算">
             <p>預設使用預先算好的研究預測（六種方法，預設該任務最佳的基準）。匯入新資料後，改在瀏覽器內用簡易基準預測（持續性）。</p>

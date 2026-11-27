@@ -260,3 +260,26 @@ test("多感測器狀態：每個有預測的感測器各自判斷，場域取�
   assert.equal(none.thresholdSource, "assumed");
   assert.equal(none.sensorStatuses.length, 1);
 });
+
+import { validValuesWith } from "./thresholds.ts";
+
+test("validValuesWith：引擎的觀測值併入原始資料（同時間以引擎為準、新時間加進來、略過歸零時段）；門檻隨之更新", () => {
+  const H = 3_600_000;
+  const t0 = Date.parse("2026-01-01T00:00:00");
+  const rows: ParsedCsvRow[] = Array.from({ length: 100 }, (_, i) => ({ timestamp: "x", tsMs: t0 + i * H, values: { s: i }, rawCells: [], flagValue: "1" }));
+  const events = [{ kind: "outage_zero_rows", start: "2026-01-01 00:00:00", end: "2026-01-01 04:00:00" }] as never;
+  const extra = [
+    { t: t0 + 99 * H, v: 500 }, // 取代
+    { t: t0 + 100 * H, v: 600 }, // 新增
+    { t: t0 + 101 * H, v: 700 }, // 新增
+  ];
+  const v = validValuesWith(rows, "s", events, extra);
+  assert.equal(v.excluded, 5);
+  assert.equal(v.added, 2);
+  assert.equal(v.values.length, 100 - 5 + 2);
+  assert.ok(v.values.includes(500) && !v.values.includes(99));
+  const base = computeFromValues(validValuesWith(rows, "s", events, []).values, "above")!;
+  const withEng = computeFromValues(v.values, "above", DEFAULT_PCT, { from: v.from, to: v.to }, "・含引擎資料 2 筆（模擬）")!;
+  assert.ok(withEng.caution > base.caution, "引擎的高值把注意線拉高");
+  assert.ok(withEng.note.includes("含引擎資料 2 筆"));
+});
