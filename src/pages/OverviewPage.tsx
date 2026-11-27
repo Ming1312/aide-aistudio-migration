@@ -1,5 +1,8 @@
 import React, { useRef, useState } from "react";
-import { ArrowRight, Send, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardList, Send, Sparkles } from "lucide-react";
+import { TASK_PRIORITY_ZH, TASK_STATUS_ZH, isOverdue, type Task } from "../../contracts/tasks";
+import type { RealDataset } from "../../contracts/types";
+import { sortTasks, todayStr } from "./TasksPage";
 import { SAFETY_TEXT, SAFETY_RANK, fmtVal, overallLevel, type DomainStatus, type Safety } from "../lib/status";
 import { askAi } from "../lib/ai";
 import { answerLocal, buildFacts } from "../lib/qa";
@@ -10,6 +13,12 @@ interface Props {
   engine: { connected: boolean; synthetic: boolean; lastAt: string | null };
   onOpenDecision: (datasetId: string) => void;
   onOpenData: (datasetId: string) => void;
+  /** 任務（員工以上才有；訪客為 null） */
+  tasks: Task[] | null;
+  isAdmin: boolean;
+  datasets: RealDataset[];
+  onOpenTasks: () => void;
+  onOpenEvents: (datasetId: string) => void;
 }
 
 const SUGGESTIONS = ["哪個場域最危險？", "未來 3 小時需要注意什麼？", "資料可信嗎？", "有什麼建議？"];
@@ -21,7 +30,7 @@ interface QA {
   focusId: string | null;
 }
 
-export const OverviewPage: React.FC<Props> = ({ statuses, engine, onOpenDecision, onOpenData }) => {
+export const OverviewPage: React.FC<Props> = ({ statuses, engine, onOpenDecision, onOpenData, tasks, isAdmin, datasets, onOpenTasks, onOpenEvents }) => {
   const overall = overallLevel(statuses);
   const withModel = statuses.filter((s) => s.hasModel);
   const counts = (["danger", "data", "caution", "safe"] as Safety[]).map((l) => ({
@@ -98,6 +107,8 @@ export const OverviewPage: React.FC<Props> = ({ statuses, engine, onOpenDecision
           </button>
         )}
       </section>
+
+      {tasks !== null && <TasksCard tasks={tasks} isAdmin={isAdmin} datasets={datasets} onOpenTasks={onOpenTasks} onOpenEvents={onOpenEvents} />}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* 各場域 */}
@@ -223,5 +234,61 @@ export const OverviewPage: React.FC<Props> = ({ statuses, engine, onOpenDecision
         </Card>
       </div>
     </div>
+  );
+};
+
+const TasksCard: React.FC<{ tasks: Task[]; isAdmin: boolean; datasets: RealDataset[]; onOpenTasks: () => void; onOpenEvents: (id: string) => void }> = ({ tasks, isAdmin, datasets, onOpenTasks, onOpenEvents }) => {
+  const today = todayStr();
+  const open = tasks.filter((t) => t.status !== "done");
+  const overdue = open.filter((t) => isOverdue(t, today)).length;
+  const doing = open.filter((t) => t.status === "doing").length;
+  const top = sortTasks(open).slice(0, 3);
+  return (
+    <section data-testid="overview-tasks" className={`rounded-lg border bg-white p-3.5 ${overdue > 0 ? "border-rose-300" : "border-slate-200"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <ClipboardList className="h-4 w-4 text-[#0B63CE]" />
+          {isAdmin ? "指派給員工的任務" : "你的任務"}
+          <span className="font-normal text-xs text-slate-600">
+            {open.length === 0 ? "全部完成" : `未完成 ${open.length}${doing > 0 ? `・進行中 ${doing}` : ""}`}
+            {overdue > 0 && <span className="ml-1.5 font-semibold text-rose-700">逾期 {overdue}</span>}
+          </span>
+        </div>
+        <button type="button" onClick={onOpenTasks} className="inline-flex items-center gap-1 text-xs font-semibold text-[#0B63CE] hover:underline">
+          {isAdmin ? "管理任務" : "查看全部"}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {top.length === 0 ? (
+        <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-600">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          {tasks.length === 0 ? (isAdmin ? "還沒有任務；到「規劃」頁指派。" : "目前沒有指派給你的任務。") : "沒有未完成的任務。"}
+        </div>
+      ) : (
+        <ul className="mt-2 divide-y divide-slate-100">
+          {top.map((t) => {
+            const ds = datasets.find((d) => d.id === t.datasetId);
+            const late = isOverdue(t, today);
+            return (
+              <li key={t.id} className="py-1.5 flex items-center justify-between gap-3 text-sm" data-testid="overview-task">
+                <div className="min-w-0">
+                  <div className="truncate text-slate-900">{t.title}</div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {TASK_STATUS_ZH[t.status]}・優先 {TASK_PRIORITY_ZH[t.priority]}
+                    {t.due ? `・${late ? "已逾期 " : "期限 "}${t.due}` : ""}
+                    {ds ? `・${ds.display_name.split("（")[0]}` : ""}
+                  </div>
+                </div>
+                {ds && (
+                  <button type="button" onClick={() => onOpenEvents(ds.id)} className="shrink-0 text-[11px] font-semibold text-[#0B63CE] hover:underline">
+                    看事件
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 };

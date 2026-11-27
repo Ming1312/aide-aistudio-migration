@@ -21,6 +21,7 @@ interface Props {
   status: DomainStatus;
   input: StatusInput;
   onOpenData: () => void;
+  onOpenEvents: () => void;
   canRecord: boolean;
   onLogin: () => void;
 }
@@ -46,7 +47,7 @@ interface Row {
   band?: [number, number] | null;
 }
 
-export const DecisionPage: React.FC<Props> = ({ status: domainStatus, input, onOpenData, canRecord, onLogin }) => {
+export const DecisionPage: React.FC<Props> = ({ status: domainStatus, input, onOpenData, onOpenEvents, canRecord, onLogin }) => {
   // 這個場域有多個受監看的感測器：預設看最嚴重的那個，也可以用上方的按鈕換
   const [selSensor, setSelSensor] = useState<string | null>(null);
   useEffect(() => setSelSensor(null), [domainStatus.datasetId]);
@@ -59,7 +60,7 @@ export const DecisionPage: React.FC<Props> = ({ status: domainStatus, input, onO
   const cache = useRef(new Map<string, AiResult | null>());
   const policy = status.policy;
 
-  const key = `${status.datasetId}|${status.sensor}|${status.asOf}|${status.level}|${status.source}|${policy?.caution}|${policy?.alarm}`;
+  const key = `${status.datasetId}|${status.sensor}|${status.asOf}|${status.level}|${status.source}|${policy?.caution}|${policy?.alarm}|${status.quality?.masked ?? 0}`;
   useEffect(() => {
     setChosen([]);
     setNote("");
@@ -207,6 +208,17 @@ export const DecisionPage: React.FC<Props> = ({ status: domainStatus, input, onO
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950" data-testid="incomplete-note">
           {status.incomplete}
           {status.asOf ? `（分析時點 ${status.asOf.slice(0, 16)}）` : ""}
+        </div>
+      )}
+
+      {domainStatus.quality && domainStatus.quality.masked > 0 && (
+        <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2" data-testid="quality-note">
+          <span>
+            已排除 {domainStatus.quality.masked} 項資料事件（約 {domainStatus.quality.maskedHours} 小時，斷線、缺值、卡住等）：不納入簡易預測與門檻，分析以正常資料為準。
+          </span>
+          <button type="button" onClick={onOpenEvents} className="font-semibold text-[#0B63CE] hover:underline whitespace-nowrap">
+            查看事件 →
+          </button>
         </div>
       )}
 

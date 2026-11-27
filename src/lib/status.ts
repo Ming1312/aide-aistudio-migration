@@ -22,6 +22,7 @@ import {
   type RiskLevel,
 } from "./candidateRisk";
 import { sensorKey } from "./thresholds";
+import { activeMaskedEvent, summarize, KIND_INFO, type ResolvedEvent } from "./events";
 import { buildLiveTask, toHourly } from "./liveSeries";
 import { buildReplayRows, type ReplayRow } from "./replayEngine";
 
@@ -97,6 +98,8 @@ export interface DomainStatus {
   alert: boolean;
   /** 最近 48 小時觀測值（迷你圖） */
   spark: Array<number | null>;
+  /** 資料事件（缺值、斷線、卡住…）摘要：排除於分析的筆數與時數 */
+  quality?: { total: number; masked: number; maskedHours: number };
 }
 
 function fromRisk(l: RiskLevel | null): Safety {
@@ -140,6 +143,10 @@ export interface StatusInput {
   liveIsBase?: boolean;
   /** 建立簡易預測前已略過的斷電／歸零列數（見 maskOutageRows） */
   maskedRows?: number;
+  /** 這個場域的資料事件（含人工標註）；被排除的時段不進簡易預測與門檻 */
+  events?: ResolvedEvent[];
+  /** 原始（未排除前）資料的最後時間；用來判斷最新資料是否落在事件中 */
+  rawLastMs?: number | null;
   /** 連到本機引擎時的即時預測（優先順序：匯入資料 > 引擎 > 預計算） */
   engine?: EngineDomain | null;
 }
@@ -181,6 +188,14 @@ export function monitoredSensors(input: StatusInput): string[] {
 
 /** 場域狀態＝所有受監看感測器中最嚴重者；非代表感測器的「先確認資料」只標在自己身上，不拉高場域等級。 */
 export function computeDomainStatus(input: StatusInput): DomainStatus {
+  const st = computeDomainStatusCore(input);
+  if (!input.events) return st;
+  const sm = summarize(input.events.filter((e) => !e.archived));
+  const quality = { total: sm.total, masked: sm.masked, maskedHours: sm.maskedHours };
+  return { ...st, quality, sensorStatuses: st.sensorStatuses.map((c) => ({ ...c, quality })) };
+}
+
+function computeDomainStatusCore(input: StatusInput): DomainStatus {
   const { dataset } = input;
   const base = CANDIDATE_POLICIES[dataset.id];
   const parts: DomainStatus[] = [];
@@ -274,7 +289,17 @@ function computeCore(input: StatusInput, policy: CandidatePolicy | null): Domain
   const currentLevel = lastRow.current === null ? "safe" : fromRisk(classify(lastRow.current, policy));
   let level: Safety = currentLevel;
   for (const v of horizons) level = maxSafety(level, v.level);
-  const unreliable = lastRow.reliability === "unreliable";
+  let reliability = lastRow.reliability;
+  const findings = [...lastRow.reliabilityFindings];
+  // 簡易預測（匯入／基準）已把事件時段拿掉；若最新的原始資料正好落在事件裡，預測是用「更早的最後有效資料」做的，要明講並要求先確認資料
+  if (source !== "precomputed") {
+    const ev = activeMaskedEvent(input.events, policy.sensor, input.rawLastMs);
+    if (ev) {
+      reliability = "unreliable";
+      findings.push(`最新資料落在「${KIND_INFO[ev.kind].zh}」事件中（${ev.start.slice(5, 16)}～${ev.end.slice(5, 16)}），已排除；改用 ${lastRow.asOf.slice(0, 16)} 的最後有效資料分析`);
+    }
+  }
+  const unreliable = reliability === "unreliable";
   if (unreliable && level !== "danger") level = "data";
   const recent = events.filter((e) => e.end >= shiftDays(lastRow!.asOf, -1)).length;
   return {
@@ -298,8 +323,8 @@ function computeCore(input: StatusInput, policy: CandidatePolicy | null): Domain
     thresholdNote: "",
     incomplete: source === "baseline" ? incompleteNote(input.dataset, input.maskedRows) : null,
     synthetic: false,
-    reliability: lastRow.reliability,
-    reliabilityFindings: lastRow.reliabilityFindings,
+    reliability,
+    reliabilityFindings: findings,
     recentEvents: recent,
     alert: horizons.some((v) => v.alert),
     spark,
@@ -395,7 +420,7 @@ export function computeFromEngine(input: StatusInput, policy: CandidatePolicy, e
 function incompleteNote(ds: RealDataset, maskedRows = 0): string {
   const exp = ds.time.expected_hours;
   const pct = exp ? `，涵蓋 ${((100 * ds.time.rows) / exp).toFixed(1)}%` : "";
-  const masked = maskedRows > 0 ? `；已略過 ${maskedRows} 列斷電／歸零資料，依最後有效資料分析` : "";
+  const masked = maskedRows > 0 ? `；已略過 ${maskedRows} 筆事件時段的資料（斷電、缺值、卡住等），依最後有效資料分析` : "";
   return `資料不完整：只有 ${ds.time.rows} 列${pct}${masked}；使用簡易基準預測，僅供參考`;
 }
 

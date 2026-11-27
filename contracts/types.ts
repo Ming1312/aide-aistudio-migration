@@ -20,7 +20,7 @@ export interface SeriesResponse {
 }
 
 export interface AnomalyEvent {
-  detector: "threshold" | "resid_z" | "relation" | "stuck" | "quality";
+  detector: "threshold" | "resid_z" | "relation" | "stuck" | "quality" | "browser" | "manual";
   kind: string; kind_zh: string; column: string;
   start: string; end: string; detected_at: string; hours: number; score: number; note: string;
 }
@@ -71,7 +71,7 @@ export interface DemoManifest { schema: string; data_kind: "synthetic"; banner: 
 
 // ---- Gemini 解釋（Node 伺服器 /api/ai/explain）
 export interface ExplainRequest {
-  kind: "data" | "forecast" | "anomaly" | "compare";
+  kind: "data" | "forecast" | "anomaly" | "compare" | "plan";
   data_kind: DataKind;
   dataset_id: string;
   facts: Fact[];           // 由前端／Node 從引擎回應『整理』出的事實；Gemini 只能引用這裡的內容

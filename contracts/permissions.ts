@@ -8,6 +8,10 @@ export type Permission =
   | "view_engine" // 看引擎連線狀態
   | "edit_thresholds" // 改風險門檻
   | "view_admin_status" // 管理狀態面板
+  | "manage_events" // 資料事件：標註（排除／正常事件）、補記事件
+  | "long_term_plan" // 長期規劃（AI 分析歷史事件；伺服器端強制）
+  | "view_tasks" // 查看與回報任務（員工）
+  | "assign_tasks" // 指派、修改、刪除任務（管理員；伺服器端強制）
   | "engine_write"; // 引擎寫入（只有正式管理者；伺服器端強制）
 
 const TABLE: Record<Permission, ReadonlyArray<Role>> = {
@@ -16,6 +20,10 @@ const TABLE: Record<Permission, ReadonlyArray<Role>> = {
   view_engine: ["staff", "demo_admin", "admin"],
   edit_thresholds: ["demo_admin", "admin"],
   view_admin_status: ["demo_admin", "admin"],
+  manage_events: ["staff", "demo_admin", "admin"],
+  long_term_plan: ["demo_admin", "admin"],
+  view_tasks: ["staff", "demo_admin", "admin"],
+  assign_tasks: ["demo_admin", "admin"],
   engine_write: ["admin"],
 };
 
@@ -37,6 +45,10 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   view_engine: "引擎連線狀態",
   edit_thresholds: "改風險門檻",
   view_admin_status: "管理狀態",
+  manage_events: "標註資料事件",
+  long_term_plan: "長期規劃",
+  view_tasks: "查看與回報任務",
+  assign_tasks: "指派任務",
   engine_write: "引擎寫入",
 };
 
@@ -46,5 +58,9 @@ export const PERMISSION_ORDER: Permission[] = [
   "view_engine",
   "edit_thresholds",
   "view_admin_status",
+  "manage_events",
+  "long_term_plan",
+  "view_tasks",
+  "assign_tasks",
   "engine_write",
 ];

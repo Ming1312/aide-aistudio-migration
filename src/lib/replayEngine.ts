@@ -100,6 +100,8 @@ const SUSPECT_KINDS = new Set([
   "outage_missing_rows",
   "outage_zero_rows",
   "decoupling",
+  "missing_values", // 瀏覽器偵測／人工標註的缺值、維修時段（見 events.ts）
+  "maintenance_window",
 ]);
 
 /** 起點 idx 的資料可信度：只看 idx 以前的觀測與起點前 24 小時內的候選事件（因果） */

@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart3, Gauge, LayoutDashboard, Lock, Settings, ShieldCheck, Unlock, UploadCloud } from "lucide-react";
+import { BarChart3, ClipboardList, Compass, Gauge, LayoutDashboard, Lock, Settings, ShieldCheck, AlertTriangle, Unlock, UploadCloud } from "lucide-react";
 import type { RealDataset } from "../../contracts/types";
 import { ADMIN_ROLE_LABEL, type AdminRoleStatus, type PageId } from "../types/app";
 
@@ -7,7 +7,9 @@ export const NAV_ITEMS: Array<{ id: PageId; label: string; icon: React.ReactNode
   { id: "overview", label: "總覽", icon: <LayoutDashboard className="h-5 w-5" />, needsDomain: false },
   { id: "data", label: "資料", icon: <BarChart3 className="h-5 w-5" />, needsDomain: true },
   { id: "decision", label: "決策", icon: <ShieldCheck className="h-5 w-5" />, needsDomain: true },
+  { id: "events", label: "事件", icon: <AlertTriangle className="h-5 w-5" />, needsDomain: true },
   { id: "import", label: "匯入", icon: <UploadCloud className="h-5 w-5" />, needsDomain: false },
+  { id: "plan", label: "規劃", icon: <Compass className="h-5 w-5" />, needsDomain: false },
   { id: "settings", label: "設定", icon: <Settings className="h-5 w-5" />, needsDomain: false },
 ];
 
@@ -15,6 +17,8 @@ export const PAGE_TITLE: Record<PageId, string> = {
   overview: "整體總覽",
   data: "資料狀況",
   decision: "決策",
+  events: "資料事件",
+  plan: "長期規劃",
   import: "資料匯入中心",
   settings: "設定",
 };
@@ -28,6 +32,8 @@ interface LayoutProps {
   adminRole: AdminRoleStatus;
   onOpenAdmin: () => void;
   importCount: number;
+  /** 未完成的任務數（員工與管理員的導覽列徽章） */
+  openTasks: number;
   children: React.ReactNode;
 }
 
@@ -40,8 +46,13 @@ export const Layout: React.FC<LayoutProps> = ({
   adminRole,
   onOpenAdmin,
   importCount,
+  openTasks,
   children,
 }) => {
+  // 員工的「規劃」頁是「任務」（管理員指派的）；管理員與訪客是長期規劃
+  const isStaff = adminRole.role === "staff";
+  const navItems = NAV_ITEMS.map((n) => (n.id === "plan" && isStaff ? { ...n, label: "任務", icon: <ClipboardList className="h-5 w-5" /> } : n));
+  const pageTitle = activePage === "plan" && isStaff ? "我的任務" : PAGE_TITLE[activePage];
   const needsDomain = NAV_ITEMS.find((n) => n.id === activePage)?.needsDomain ?? false;
 
   const navButton = (item: (typeof NAV_ITEMS)[number], vertical: boolean) => {
@@ -64,6 +75,11 @@ export const Layout: React.FC<LayoutProps> = ({
         <span className="relative">
           {item.icon}
           {item.id === "import" && importCount > 0 && <span className="absolute -top-1 -right-2 h-2 w-2 rounded-full bg-emerald-500" aria-label="已有匯入資料" />}
+          {item.id === "plan" && openTasks > 0 && (
+            <span className="absolute -top-1.5 -right-3 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[10px] leading-4 text-center font-semibold" aria-label={`${openTasks} 項未完成任務`}>
+              {openTasks}
+            </span>
+          )}
         </span>
         {item.label}
       </button>
@@ -78,7 +94,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className="text-sm font-bold tracking-tight">AIDE</div>
         </div>
         <nav className="flex-1 px-2.5 py-3 space-y-1" aria-label="主導覽">
-          {NAV_ITEMS.map((n) => navButton(n, true))}
+          {navItems.map((n) => navButton(n, true))}
         </nav>
       </aside>
 
@@ -86,7 +102,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
           <div className="max-w-[1180px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <h1 className="text-base font-bold text-slate-900 whitespace-nowrap">{PAGE_TITLE[activePage]}</h1>
+              <h1 className="text-base font-bold text-slate-900 whitespace-nowrap">{pageTitle}</h1>
               {needsDomain && (
                 <select
                   id="sidebar-dataset-select"
@@ -126,7 +142,7 @@ export const Layout: React.FC<LayoutProps> = ({
       </div>
 
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 flex" aria-label="主導覽（手機）">
-        {NAV_ITEMS.map((n) => navButton(n, false))}
+        {navItems.map((n) => navButton(n, false))}
       </nav>
     </div>
   );

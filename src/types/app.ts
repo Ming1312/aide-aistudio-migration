@@ -13,7 +13,7 @@ import type {
   RealCatalog,
 } from "../../contracts/types";
 
-export type PageId = "overview" | "data" | "decision" | "import" | "settings";
+export type PageId = "overview" | "data" | "decision" | "events" | "import" | "plan" | "settings";
 
 export interface ApiHealthStatus {
   ok: boolean;

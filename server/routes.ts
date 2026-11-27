@@ -29,6 +29,8 @@ import {
 } from "./gemini.ts";
 import type { GeminiClientBundle, GeminiErrorCategory } from "./gemini.ts";
 import { fetchImportText, parseExtraHosts } from "./importProxy.ts";
+import { MAX_TASKS, parseTaskInput } from "../contracts/tasks.ts";
+import { TaskStore } from "./tasks.ts";
 import {
   computeDomainStatus,
   InvalidWindowHoursError,
@@ -191,6 +193,8 @@ export interface ApiRouterOptions {
   perModelTimeoutMs?: number;
   totalTimeoutMs?: number;
   overviewStatusPath?: string;
+  /** 任務清單的 JSON 檔路徑；不給就只放記憶體（測試用）。server.ts 預設 state/tasks.json */
+  tasksFile?: string | null;
 }
 
 function sanitizeLiveText(text: string, secrets: string[]): string {
@@ -900,6 +904,76 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
     res.json({ id, tabs });
   });
 
+  // ---- 任務：管理員指派給員工 ----
+  const taskStore = new TaskStore(options.tasksFile ?? null);
+  const taskGate = (req: Request, res: Response, perm: "view_tasks" | "assign_tasks") => {
+    const role = adminGate.role(getOrCreateSessionId(req, res));
+    if (!can(role, perm)) {
+      res.status(403).json({ detail: perm === "assign_tasks" ? "指派任務需要管理員身分，請先登入" : "查看任務需要員工或管理員身分，請先登入" });
+      return null;
+    }
+    if (!liveReadLimiter.check(req.ip || req.socket.remoteAddress || "unknown").allowed) {
+      res.status(429).json({ detail: "請求過於頻繁，請稍後再試" });
+      return null;
+    }
+    return role;
+  };
+
+  router.get("/tasks", (req: Request, res: Response) => {
+    if (!taskGate(req, res, "view_tasks")) return;
+    res.json({ tasks: taskStore.list(), persistent: taskStore.persistent });
+  });
+
+  router.post("/tasks", (req: Request, res: Response) => {
+    const role = taskGate(req, res, "assign_tasks");
+    if (!role) return;
+    const { value, errors } = parseTaskInput(req.body, VALID_DATASET_IDS);
+    if (!value.title && errors.length === 0) errors.push("任務標題不能空白（最多 80 字）");
+    if (errors.length > 0) {
+      res.status(400).json({ detail: errors.join("；") });
+      return;
+    }
+    const t = taskStore.create(value, role === "admin" ? "管理員" : "管理員（展示）");
+    if (!t) {
+      res.status(409).json({ detail: `任務最多 ${MAX_TASKS} 筆，請先刪除已完成的任務` });
+      return;
+    }
+    res.status(201).json(t);
+  });
+
+  router.patch("/tasks/:id", (req: Request, res: Response) => {
+    const role = taskGate(req, res, "view_tasks");
+    if (!role) return;
+    const { value, errors } = parseTaskInput(req.body, VALID_DATASET_IDS);
+    if (errors.length > 0) {
+      res.status(400).json({ detail: errors.join("；") });
+      return;
+    }
+    // 員工只能回報進度（狀態與說明）；改標題、期限、指派等是管理員的事
+    const isAdmin = can(role, "assign_tasks");
+    const patch = isAdmin ? value : { status: value.status, note: value.note };
+    if (!isAdmin && Object.keys(value).some((k) => k !== "status" && k !== "note")) {
+      res.status(403).json({ detail: "員工只能回報任務的進度與說明" });
+      return;
+    }
+    const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+    const t = taskStore.update(String(req.params.id ?? ""), clean, role === "admin" ? "管理員" : role === "staff" ? "員工" : "管理員（展示）");
+    if (!t) {
+      res.status(404).json({ detail: "找不到這個任務" });
+      return;
+    }
+    res.json(t);
+  });
+
+  router.delete("/tasks/:id", (req: Request, res: Response) => {
+    if (!taskGate(req, res, "assign_tasks")) return;
+    if (!taskStore.remove(String(req.params.id ?? ""))) {
+      res.status(404).json({ detail: "找不到這個任務" });
+      return;
+    }
+    res.json({ ok: true });
+  });
+
   router.post("/ai/explain", async (req: Request, res: Response) => {
     const clientIp = req.ip || req.socket.remoteAddress || "unknown";
     const rate = limiter.check(clientIp);
@@ -909,6 +983,11 @@ export function createApiRouter(options: ApiRouterOptions = {}): Router {
     }
 
     const body = req.body as Partial<ExplainRequest> | undefined;
+    // 長期規劃（歷史事件分析）只給管理員：伺服器端檢查，不靠前端隱藏
+    if (body?.kind === "plan" && !can(adminGate.role(getOrCreateSessionId(req, res)), "long_term_plan")) {
+      res.status(403).json({ detail: "長期規劃需要管理員身分，請先登入" });
+      return;
+    }
     if (
       !body ||
       !body.dataset_id ||

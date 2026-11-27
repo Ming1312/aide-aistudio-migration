@@ -30,6 +30,14 @@ export function buildDomainFacts(s: DomainStatus): Fact[] {
     text: s.reliability === "reliable" ? "感測器可信度：正常" : `感測器可信度：${s.reliability}（${s.reliabilityFindings.join("；") || "有疑慮"}）`,
   });
   facts.push({ id: "d4", text: `近 24 小時偵測器候選事件 ${s.recentEvents} 筆`, value: s.recentEvents, unit: "筆" });
+  if (s.quality && s.quality.total > 0) {
+    facts.push({
+      id: "d5",
+      text: `資料事件紀錄共 ${s.quality.total} 筆，其中 ${s.quality.masked} 筆已排除於分析（約 ${s.quality.maskedHours} 小時）；排除的時段不納入門檻與簡易預測，分析以其餘正常資料為準`,
+      value: s.quality.masked,
+      unit: "筆",
+    });
+  }
   return facts;
 }
 

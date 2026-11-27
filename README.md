@@ -116,7 +116,7 @@ cd demo_kit
 填好後按 Apply changes，開 `/api/health` 應看到 `engine_connected: true`、`live_writes_enabled: false`。
 引擎連不上時 App 不會當機：決策輔助改用預計算結果並標示來源（`precomputed`），即時預測頁保留上次畫面並說明離線，不會拿預計算檔冒充即時預測。
 
-> **v1.1.0 之後的本機變更（尚未推送、未在 AI Studio 驗證）**：介面改成五個區塊（總覽／資料／決策／匯入／設定）；七個場域一視同仁（研究預測＋假定門檻）；資料匯入中心可接 Google 試算表、CSV 網址、檔案或貼上；合成展示已刪除；三個角色（訪客／員工／管理員；展示帳號 `staff`／`aide-staff`、`demo`／`aide-demo` 皆不能寫入引擎）；總覽與決策可串接你電腦上的分析引擎（`bash scripts/dev_with_engine.sh`）。以下章節中的舊頁面（場域看板、即時預測、決策輔助等）已不在 App 內。見 [`docs/final/09_CHANGES_AFTER_V1_1_0.md`](docs/final/09_CHANGES_AFTER_V1_1_0.md)。
+> **v1.1.0 之後的本機變更（尚未推送、未在 AI Studio 驗證）**：介面改成五個區塊（總覽／資料／決策／匯入／設定）；七個場域一視同仁（研究預測＋假定門檻）；資料匯入中心可接 Google 試算表、CSV 網址、檔案或貼上；合成展示已刪除；三個角色（訪客／員工／管理員；展示帳號 `staff`／`aide-staff`、`demo`／`aide-demo` 皆不能寫入引擎）；總覽與決策可串接你電腦上的分析引擎（`bash scripts/dev_with_engine.sh`）；「事件」頁記錄缺值／斷線／卡住並可排除於分析；「規劃」頁（管理員）用 AI 分析歷史事件提出長期規劃。以下章節中的舊頁面（場域看板、即時預測、決策輔助等）已不在 App 內。見 [`docs/final/09_CHANGES_AFTER_V1_1_0.md`](docs/final/09_CHANGES_AFTER_V1_1_0.md)。
 
 ## 已驗證與已知限制
 

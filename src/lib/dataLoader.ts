@@ -258,7 +258,7 @@ export async function requestGeneralExplain(
 ): Promise<ExplainResponse> {
   const res = await fetch("/api/ai/explain", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...sessionHeaders() },
     body: JSON.stringify(req),
   });
   const data = await res.json();

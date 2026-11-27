@@ -1414,3 +1414,105 @@ test("X-Aide-Session 標頭：cookie 被擋的環境（手機、跨站 iframe）
     assert.equal(imp.status, 400);
   });
 });
+
+test("長期規劃（/api/ai/explain kind=plan）：只有管理員；訪客與員工 403，其他種類的解釋不受影響", async () => {
+  await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
+    const facts = [{ id: "p1", text: "七個場域的資料事件紀錄共 10 筆" }];
+    const post = async (session: string, kind: string) =>
+      fetch(`${base}/api/ai/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Aide-Session": session },
+        body: JSON.stringify({ kind, data_kind: "real", dataset_id: "sheep_barn", facts }),
+      });
+    const sess = async () => ((await (await fetch(`${base}/api/admin/role`)).json()) as { session: string }).session;
+    const login = async (session: string, account: string, passphrase: string) =>
+      fetch(`${base}/api/admin/login`, { method: "POST", headers: { "Content-Type": "application/json", "X-Aide-Session": session }, body: JSON.stringify({ account, passphrase }) });
+
+    const visitor = await sess();
+    assert.equal((await post(visitor, "plan")).status, 403);
+    assert.equal((await post(visitor, "data")).status, 200);
+
+    const staff = await sess();
+    assert.equal((await login(staff, "staff", "aide-staff")).status, 200);
+    assert.equal((await post(staff, "plan")).status, 403);
+
+    const admin = await sess();
+    assert.equal((await login(admin, "demo", "aide-demo")).status, 200);
+    const ok = await post(admin, "plan");
+    assert.equal(ok.status, 200);
+    assert.ok(((await ok.json()) as { fallback_category?: string }).fallback_category, "沒有 Gemini 金鑰時回規則式備援");
+  });
+});
+
+test("任務：管理員指派、員工回報進度；訪客不能看，員工不能指派或改內容；輸入有驗證", async () => {
+  await withServer({ engineBaseUrl: "", geminiBundle: null }, async (base) => {
+    const sess = async () => ((await (await fetch(`${base}/api/admin/role`)).json()) as { session: string }).session;
+    const login = async (session: string, account: string, passphrase: string) =>
+      fetch(`${base}/api/admin/login`, { method: "POST", headers: { "Content-Type": "application/json", "X-Aide-Session": session }, body: JSON.stringify({ account, passphrase }) });
+    const call = (session: string, method: string, url: string, body?: unknown) =>
+      fetch(`${base}/api/tasks${url}`, { method, headers: { "Content-Type": "application/json", "X-Aide-Session": session }, body: body === undefined ? undefined : JSON.stringify(body) });
+
+    const visitor = await sess();
+    assert.equal((await call(visitor, "GET", "")).status, 403);
+
+    const staff = await sess();
+    await login(staff, "staff", "aide-staff");
+    const admin = await sess();
+    await login(admin, "demo", "aide-demo");
+
+    assert.equal(((await (await call(staff, "GET", "")).json()) as { tasks: unknown[] }).tasks.length, 0);
+    assert.equal((await call(staff, "POST", "", { title: "x" })).status, 403);
+    assert.equal((await call(admin, "POST", "", { title: "" })).status, 400);
+    assert.equal((await call(admin, "POST", "", { title: "x", datasetId: "nope" })).status, 400);
+    assert.equal((await call(admin, "POST", "", { title: "x", due: "明天" })).status, 400);
+
+    const created = await call(admin, "POST", "", { title: "檢查 pH 探頭", detail: "接線與供電", datasetId: "sanyegong_creek", sensor: "pH", horizon: "short", priority: "high", due: "2026-12-01" });
+    assert.equal(created.status, 201);
+    const t = (await created.json()) as { id: string; status: string; priority: string; createdBy: string };
+    assert.equal(t.status, "todo");
+    assert.equal(t.priority, "high");
+
+    // 員工看得到同一筆，只能改狀態與說明
+    const list = (await (await call(staff, "GET", "")).json()) as { tasks: Array<{ id: string }> };
+    assert.equal(list.tasks[0].id, t.id);
+    const done = await call(staff, "PATCH", `/${t.id}`, { status: "done", note: "已更換接頭" });
+    assert.equal(done.status, 200);
+    const d = (await done.json()) as { status: string; note: string; doneAt: string | null; updatedBy: string; title: string };
+    assert.equal(d.status, "done");
+    assert.equal(d.note, "已更換接頭");
+    assert.ok(d.doneAt);
+    assert.equal(d.updatedBy, "員工");
+    assert.equal(d.title, "檢查 pH 探頭");
+    assert.equal((await call(staff, "PATCH", `/${t.id}`, { title: "改標題" })).status, 403);
+    assert.equal((await call(staff, "PATCH", `/${t.id}`, { status: "bad" })).status, 400);
+    assert.equal((await call(staff, "DELETE", `/${t.id}`)).status, 403);
+
+    // 管理員可以改內容、重新打開、刪除
+    const re = (await (await call(admin, "PATCH", `/${t.id}`, { title: "檢查 pH 與 DO 探頭", status: "todo", due: null })).json()) as { title: string; doneAt: string | null; due: string | null };
+    assert.equal(re.title, "檢查 pH 與 DO 探頭");
+    assert.equal(re.doneAt, null);
+    assert.equal(re.due, null);
+    assert.equal((await call(admin, "DELETE", `/${t.id}`)).status, 200);
+    assert.equal((await call(admin, "DELETE", `/${t.id}`)).status, 404);
+  });
+});
+
+test("任務清單寫到檔案：重新啟動（重新載入）後還在", async () => {
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { TaskStore } = await import("./tasks.ts");
+  const dir = mkdtempSync(path.join(tmpdir(), "aide-tasks-"));
+  try {
+    const file = path.join(dir, "sub", "tasks.json");
+    const a = new TaskStore(file);
+    assert.equal(a.persistent, true);
+    const t = a.create({ title: "巡檢" }, "管理員")!;
+    a.update(t.id, { status: "doing" }, "員工");
+    const b = new TaskStore(file);
+    assert.equal(b.list().length, 1);
+    assert.equal(b.list()[0].status, "doing");
+    assert.equal(new TaskStore(null).persistent, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -76,14 +76,25 @@ export function mandatoryDisclaimers(kind: ExplainRequest["kind"], dataKind: Dat
   if (dataKind === "synthetic") d.unshift("這是合成（模擬）展示資料，不是真實資料，不能用來判斷真實世界的表現。");
   if (kind === "forecast" || kind === "compare") d.push("預測是研究預測（探索性、尚未經獨立前瞻驗證），模式是歷史時點模擬，不是即時監控。");
   if (kind === "anomaly") d.push("異常事件是候選事件，需要現場確認，不是故障判定。");
+  if (kind === "plan") d.push("長期規劃是依歷史資料事件的統計提出的建議，不是預測未來；實際排程、預算與是否採用由管理員判斷。");
   return d;
 }
 
 // ------------------------------------------------------------------ 提示詞
+/** 長期規劃（管理員）：沿用同一組欄位與核對機制，只是各欄位的用途不同。 */
+export const PLAN_GUIDE = `【輸出要求：長期規劃】
+這是給管理員的長期規劃分析。事實清單是各場域「歷史資料事件」（缺值、斷線、卡住、突然跳動…）的統計。
+- summary：兩三句話，說明整體資料品質與最需要先處理的重點。
+- observations：從歷史事件看到的規律（哪些場域或感測器反覆出事、事件集中的時段、增加或減少的趨勢），每條都要 cites。
+- possible_causes：這些規律的常見結構性原因（例如探頭老化、供電不穩、通訊不穩），語氣是「可能」，需 cites。
+- suggested_checks：規劃項目。每一條以【短期】、【中期】或【長期】開頭（短期＝一個月內可做，中期＝一季內，長期＝半年以上）；內容是由人執行的維護、校正、備援、門檻複審、資料補強、流程建立。不得出現事實清單沒有的數字，也不要寫具體日期或金額。
+- cannot_conclude：這份分析無法判斷的事（例如事件的真正原因、之後是否一定再發生）。`;
+
 export function buildPrompt(req: ExplainRequest): { system: string; user: string } {
   const facts = req.facts.map((x) => `[${x.id}] ${x.text}`).join("\n");
   const q = req.question?.trim() ? `\n使用者的問題：${req.question.trim().slice(0, 300)}` : "\n請整體解釋這些資料。";
-  return { system: SYSTEM_INSTRUCTION, user: `data_kind: ${req.data_kind}\n解釋類型: ${req.kind}\n\n【事實清單】\n${facts}\n${q}` };
+  const plan = req.kind === "plan" ? `\n${PLAN_GUIDE}` : "";
+  return { system: SYSTEM_INSTRUCTION, user: `data_kind: ${req.data_kind}\n解釋類型: ${req.kind}\n\n【事實清單】\n${facts}\n${q}${plan}` };
 }
 
 // ------------------------------------------------------------------ 伺服器端核對
